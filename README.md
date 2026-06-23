@@ -52,8 +52,15 @@ agentic_profile_matching/
 ├── Dockerfile                     # Streamlit app containerization config
 ├── .github/workflows/ci.yml       # GitHub Actions CI workflow config
 ├── requirements.txt               # Dependencies list
+├── ROADMAP.md                     # Project implementation roadmap and future backlog
 └── README.md                      # Project documentation
 ```
+
+---
+
+## Project Roadmap
+
+Details on implementation progress, milestones, and future goals (like multi-agent debate protocols, fairness/bias auditing, and native ATS integrations) are maintained in the root [ROADMAP.md](ROADMAP.md).
 
 ---
 

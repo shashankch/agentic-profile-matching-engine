@@ -268,19 +268,8 @@ To proactively prevent 429 rate limit exceptions and TPM/RPM exhaustion on free 
 
 ---
 
-## 8. Implementation Roadmap
+## 8. Project Roadmap & Milestones
 
-1. **Phase 1: Environment & Setup**
-   - Install dependencies from `requirements.txt` (`langgraph`, `streamlit`, `langchain-groq`, `langchain-google-genai`).
-   - Create a local `.env` file to store `GROQ_API_KEY` and `GEMINI_API_KEY`.
-2. **Phase 2: Dataset Generation & Local DB Ingestion**
-   - Execute `python src/generate_dataset.py` to create raw resumes locally.
-   - Run `python src/resume_rag.py` to ingest the resumes into ChromaDB.
-3. **Phase 3: LangGraph State & Workflow**
-   - Write `src/matching_agent.py` setting up the graph state structure.
-   - Define nodes, edges, conditional routes, and compile the StateGraph.
-4. **Phase 4: Tool Implementation**
-   - Implement `extract_requirements`, `compare_candidates`, and `generate_interview_questions` using `langchain-groq` or `langchain-google-genai`.
-5. **Phase 5: Streamlit Interface & Visual Testing**
-   - Create a clean `app.py` displaying the dashboard columns, filters, and chat inputs.
-   - Verify performance and user flows with 5+ test scenarios.
+The details regarding current implementation progress, release status of phases 1-5, and the long-term backlog of features are tracked in the root [ROADMAP.md](../ROADMAP.md).
+
+---

@@ -1,0 +1,32 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	parse_input(parse_input)
+	extract_requirements(extract_requirements)
+	adjust_requirements(adjust_requirements)
+	conversational_query(conversational_query)
+	search_resumes(search_resumes)
+	rank_candidates(rank_candidates)
+	deep_screen(deep_screen)
+	recommendation(recommendation)
+	generate_report(generate_report)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> parse_input;
+	adjust_requirements --> search_resumes;
+	deep_screen --> recommendation;
+	extract_requirements --> search_resumes;
+	parse_input -.-> adjust_requirements;
+	parse_input -.-> conversational_query;
+	parse_input -.-> extract_requirements;
+	rank_candidates --> deep_screen;
+	recommendation --> generate_report;
+	search_resumes --> rank_candidates;
+	conversational_query --> __end__;
+	generate_report --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

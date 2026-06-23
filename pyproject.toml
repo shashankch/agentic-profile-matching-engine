@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentic_profile_matching"
+version = "0.1.0"
+description = "Production-grade Agentic Profile Matching Engine"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "chromadb",
+    "sentence-transformers",
+    "PyPDF2",
+    "python-docx",
+    "rank-bm25",
+    "reportlab",
+    "langgraph",
+    "streamlit",
+    "langchain-core",
+    "langchain-community",
+    "langchain-groq",
+    "langchain-google-genai",
+    "langchain-openai",
+    "python-dotenv"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["agentic_profile_matching*"]

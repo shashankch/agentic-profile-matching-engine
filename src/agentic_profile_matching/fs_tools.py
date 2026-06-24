@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 import traceback
 
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 from docx import Document
 # From github.com/shashankch/llm_file_system_assistant
 

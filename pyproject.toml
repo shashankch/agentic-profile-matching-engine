@@ -11,7 +11,7 @@ requires-python = ">=3.10"
 dependencies = [
     "chromadb",
     "sentence-transformers",
-    "PyPDF2",
+    "pypdf",
     "python-docx",
     "rank-bm25",
     "reportlab",

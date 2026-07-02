@@ -1,0 +1,14 @@
+chromadb
+sentence-transformers
+pypdf
+python-docx
+rank-bm25
+reportlab
+langgraph
+streamlit
+langchain-core
+langchain-community
+langchain-groq
+langchain-google-genai
+langchain-openai
+

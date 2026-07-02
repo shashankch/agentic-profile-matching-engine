@@ -1,0 +1,82 @@
+# ------------------------------------------
+# Virtual Environments (Local Setup)
+# ------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+
+# ------------------------------------------
+# Python Cache and Compilation
+# ------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# ------------------------------------------
+# Vector Database & Model Cache
+# (Chroma DB and datasets are generated dynamically by the pipeline)
+# ------------------------------------------
+chroma_db/
+.chroma/
+src/chroma_db/
+src/data/
+**/chroma_db/
+**/data/
+
+
+# ------------------------------------------
+# Jupyter Notebooks Cache & Checkpoints
+# ------------------------------------------
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ------------------------------------------
+# OS-specific (macOS / Windows)
+# ------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ------------------------------------------
+# IDE Settings
+# ------------------------------------------
+.vscode/
+.idea/
+*.suo
+*.swp
+
+# Local Environment & Secrets
+# ------------------------------------------
+.env
+.env.*
+!.env.example
+
+# ------------------------------------------
+# Python Package Build & Distribution
+# ------------------------------------------
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+

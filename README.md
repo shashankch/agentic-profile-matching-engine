@@ -18,7 +18,7 @@ Detailed design diagrams, specifications, and requirements can be found in the [
   - **Round 2 (Deep Analysis)**: LLM profile auditing highlighting candidates' core strengths, gaps, and improvements.
   - **Round 3 (Final Screening)**: Automatic Hire/No-Hire recommendations and tailored technical screening questions.
 - **Streamlit Recruiter Dashboard**: Interactive user interface providing real-time sidebar constraint updates, conversational chat log feed, and structured candidate comparison matrix tabs.
-- **Free API Integrations**: Built to use 100% free developer tiers for LLM orchestration (Groq API using Llama 3 models or Google Gemini Pro) alongside local, self-hosted embeddings.
+- **Free API Integrations**: Built to use 100% free developer tiers for LLM orchestration (Groq API using GPT OSS/Qwen models or Google Gemini Pro) alongside local, self-hosted embeddings.
 
 ---
 

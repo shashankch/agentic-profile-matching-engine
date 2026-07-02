@@ -43,7 +43,7 @@ def run_scenarios():
         "feedback_pending": False,
         "user_feedback": "",
         "llm_provider": "Groq",
-        "llm_model": "llama-3.3-70b-versatile",
+        "llm_model": "openai/gpt-oss-120b",
         "api_key": api_key,
         "api_url": None
     }
@@ -85,7 +85,7 @@ def run_scenarios():
         "feedback_pending": False,
         "user_feedback": "",
         "llm_provider": "Groq",
-        "llm_model": "llama-3.3-70b-versatile",
+        "llm_model": "openai/gpt-oss-120b",
         "api_key": api_key,
         "api_url": None
     }
@@ -121,7 +121,7 @@ def run_scenarios():
         "feedback_pending": False,
         "user_feedback": "",
         "llm_provider": "Groq",
-        "llm_model": "llama-3.3-70b-versatile",
+        "llm_model": "openai/gpt-oss-120b",
         "api_key": api_key,
         "api_url": None
     }

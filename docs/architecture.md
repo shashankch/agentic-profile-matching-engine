@@ -252,7 +252,7 @@ To make the Agentic Profile Matching Engine completely independent and productio
 The system operates on 100% free or open-source tiers to guarantee zero runtime costs:
 1. **Embeddings & Vector Database**: Local `sentence-transformers/all-MiniLM-L6-v2` embeddings and local, self-hosted `ChromaDB` storage.
 2. **LLM Orchestration Layer**: The LangGraph workflow is designed to connect to the following free developer API options:
-   - **Groq API** (Free Tier): Utilizing fast models like `llama-3.3-70b-versatile` or `mixtral-8x7b-32768`.
+   - **Groq API** (Free Tier): Utilizing fast models like `openai/gpt-oss-120b` or `qwen/qwen3.6-27b`.
    - **Google Gemini API** (Free Developer Plan / Gemini Pro): Offering large context windows and strong reasoning for candidate comparison and screening report generation.
 3. **Execution Safety**: API keys are loaded locally from environment variables (`GROQ_API_KEY`, `GEMINI_API_KEY`) via a `.env` file, ensuring private and secure operation.
 

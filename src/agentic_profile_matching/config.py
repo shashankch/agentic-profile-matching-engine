@@ -16,6 +16,8 @@ TOP_K = 10
 # Supported LLM Models & Providers
 SUPPORTED_PROVIDERS = {
     "Groq": [
+        "openai/gpt-oss-120b",
+        "qwen/qwen3.6-27b",
         "llama-3.3-70b-versatile",
         "llama3-70b-8192",
         "mixtral-8x7b-32768"
@@ -35,7 +37,7 @@ SUPPORTED_PROVIDERS = {
 }
 
 DEFAULT_PROVIDER = "Groq"
-DEFAULT_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_MODEL = "openai/gpt-oss-120b"
 THROTTLE_DELAY = 1.5  # Delay in seconds to prevent hitting LLM rate limits
 
 # Default Candidate Processing Limits

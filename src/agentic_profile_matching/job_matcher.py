@@ -6,7 +6,6 @@ from rank_bm25 import BM25Okapi
 import chromadb
 
 from agentic_profile_matching import config
-from agentic_profile_matching.resume_rag import MetadataExtractor
 
 
 class JobMatcher:

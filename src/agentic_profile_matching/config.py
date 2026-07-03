@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional
 from dotenv import load_dotenv
 
 # Load environment variables from .env file at startup

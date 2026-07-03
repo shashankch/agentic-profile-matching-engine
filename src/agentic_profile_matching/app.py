@@ -6,9 +6,9 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 # Load configurations
 load_dotenv()
-from agentic_profile_matching import config
-from agentic_profile_matching.matching_agent import matching_agent_workflow
-from agentic_profile_matching.tools import compare_candidates
+from agentic_profile_matching import config  # noqa: E402
+from agentic_profile_matching.matching_agent import matching_agent_workflow  # noqa: E402
+from agentic_profile_matching.tools import compare_candidates  # noqa: E402
 
 
 # Setup page config
@@ -372,7 +372,7 @@ with tab1:
                 # Render assistant output
                 with st.chat_message("assistant"):
                     if st.session_state["shortlist"]:
-                        st.markdown(f"Analyzed candidates and successfully updated active requirements.")
+                        st.markdown("Analyzed candidates and successfully updated active requirements.")
                         if st.session_state["ranking_explanation"]:
                             st.info(st.session_state["ranking_explanation"])
                         st.markdown(f"**Top Candidates Shortlisted**: {', '.join(c['name'] for c in st.session_state['shortlist'][:3])}")

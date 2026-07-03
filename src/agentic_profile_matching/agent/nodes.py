@@ -1,7 +1,7 @@
 import re
 import time
 import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any
 
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
@@ -162,9 +162,6 @@ def rank_candidates_node(state: AgentState) -> Dict[str, Any]:
         
     try:
         requirements = state.get("requirements", {}) or {}
-        must_have_skills = [s.lower().strip() for s in requirements.get("must_have_skills", []) if s]
-        nice_to_have_skills = [s.lower().strip() for s in requirements.get("nice_to_have_skills", []) if s]
-        
         raw_matches = state.get("shortlist", []) or []
         ranked_shortlist = []
         
@@ -369,7 +366,7 @@ def recommendation_node(state: AgentState) -> Dict[str, Any]:
                 c["screening_status"] = "Borderline Hire"
             else:
                 c["screening_status"] = "Rejected / No-Hire"
-        except Exception as e:
+        except Exception:
             c["screening_status"] = "Screened"
             
     return {"shortlist": shortlist, "current_round": 3, "errors": errors}

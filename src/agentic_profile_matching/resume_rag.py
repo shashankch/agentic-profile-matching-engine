@@ -1,5 +1,4 @@
 import re
-import json
 from pathlib import Path
 from typing import Dict, List, Optional
 from sentence_transformers import SentenceTransformer

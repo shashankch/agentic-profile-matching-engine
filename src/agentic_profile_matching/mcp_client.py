@@ -1,13 +1,12 @@
 import sys
-import os
 import asyncio
 import threading
 import logging
 import atexit
-from pathlib import Path
 from typing import Dict, Any, Optional
 
 from mcp import ClientSession, StdioServerParameters
+from agentic_profile_matching import config
 from mcp.client.stdio import stdio_client
 
 logger = logging.getLogger("mcp_client")
@@ -43,7 +42,6 @@ class MCPClientManager:
         self.contexts: Dict[str, Any] = {}
         
         # Configure local python environment command and paths from config
-        from agentic_profile_matching import config
         fs_server_path = config.FILESYSTEM_SERVER_PATH
         search_server_path = config.SEARCH_SERVER_PATH
         
@@ -147,7 +145,6 @@ class MCPClientManager:
         )
         try:
             # Wait for execution to finish
-            from agentic_profile_matching import config
             mcp_result = future.result(timeout=config.MCP_TIMEOUT)
 
 

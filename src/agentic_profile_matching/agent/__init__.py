@@ -2,7 +2,7 @@ from pathlib import Path
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 
-from agentic_profile_matching.agent.state import AgentState, JobRequirements, CandidateMatch
+from agentic_profile_matching.agent.state import AgentState
 from agentic_profile_matching.agent.routers import route_input
 from agentic_profile_matching.agent.nodes import (
     parse_input_node,

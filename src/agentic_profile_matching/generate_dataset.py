@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from docx import Document
 from reportlab.lib.pagesizes import letter

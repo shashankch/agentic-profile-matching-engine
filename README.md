@@ -60,18 +60,15 @@ agentic_profile_matching/
 │   ├── test_tools.py              # Unit tests for assessment tools
 │   └── test_mcp.py                # Unit tests for MCP server/client & fallbacks
 ├── docs/
-│   ├── problemStatement.md        # Project requirements
 │   ├── architecture.md            # Detailed technical design specifications
 │   ├── state_machine.mermaid      # Mermaid diagram code of LangGraph state machine
 │   └── state_machine.png          # Rendered visual image of the state machine
-
 ├── pyproject.toml                 # PEP 621 compliant package setup configurations
 ├── Dockerfile                     # Streamlit app containerization config
 ├── .github/workflows/ci.yml       # GitHub Actions CI workflow config
 ├── requirements.txt               # Dependencies list
 ├── ROADMAP.md                     # Project implementation roadmap and future backlog
-├── README.md                      # Project documentation
-└── mcpIntegration.md              # MCP extension task statement
+└── README.md                      # Project documentation
 ```
 
 

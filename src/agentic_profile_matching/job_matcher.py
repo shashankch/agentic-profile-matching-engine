@@ -14,7 +14,11 @@ class JobMatcher:
         self.model_name = model_name or config.EMBEDDING_MODEL
         self.embedder = SentenceTransformer(self.model_name)
         self.client = chromadb.PersistentClient(path=config.VECTOR_DB_PATH)
-        self.collection = self.client.get_collection(collection_name)
+        try:
+            self.collection = self.client.get_collection(collection_name)
+        except Exception:
+            print(f"Collection '{collection_name}' not found. Creating it to avoid crash.")
+            self.collection = self.client.get_or_create_collection(collection_name)
 
     def match(
         self,

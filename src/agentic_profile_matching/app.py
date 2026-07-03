@@ -204,6 +204,8 @@ if "deep_limit" not in st.session_state:
     st.session_state["deep_limit"] = config.DEFAULT_DEEP_LIMIT
 if "recommendation_limit" not in st.session_state:
     st.session_state["recommendation_limit"] = config.DEFAULT_RECOMMENDATION_LIMIT
+if "errors" not in st.session_state:
+    st.session_state["errors"] = []
 
 
 # ----------------------------------------------------
@@ -282,7 +284,8 @@ if st.sidebar.button("Sync Constraints & Re-Rank"):
         "llm_provider": llm_provider,
         "llm_model": llm_model,
         "api_key": api_key,
-        "api_url": api_url
+        "api_url": api_url,
+        "errors": []
     }
     
     with st.spinner("Re-ranking candidates based on updated constraints..."):
@@ -290,6 +293,7 @@ if st.sidebar.button("Sync Constraints & Re-Rank"):
         st.session_state["shortlist"] = result.get("shortlist", [])
         st.session_state["final_report"] = result.get("final_report", "")
         st.session_state["ranking_explanation"] = result.get("ranking_explanation", "")
+        st.session_state["errors"] = result.get("errors", [])
         st.success("Shortlist re-ranked successfully!")
 
 
@@ -299,6 +303,12 @@ if st.sidebar.button("Sync Constraints & Re-Rank"):
 
 st.markdown('<h1 class="app-header">💼 Agentic Profile Matching Engine</h1>', unsafe_allow_html=True)
 st.markdown('<p class="app-subtitle">Your interactive AI assistant to search, rank, screen, and compare candidate resumes.</p>', unsafe_allow_html=True)
+
+# Render active warnings/errors from the agent run
+if st.session_state["errors"]:
+    for err in st.session_state["errors"]:
+        st.warning(f"⚠️ {err}")
+
 
 tab1, tab2, tab3 = st.tabs(["💬 Chat Workspace", "📊 Shortlist & Comparison", "🔎 Deep Screening Reports"])
 
@@ -342,7 +352,8 @@ with tab1:
             "llm_provider": llm_provider,
             "llm_model": llm_model,
             "api_key": api_key,
-            "api_url": api_url
+            "api_url": api_url,
+            "errors": []
         }
         
         # Execute workflow
@@ -356,6 +367,7 @@ with tab1:
                 st.session_state["shortlist"] = result.get("shortlist", [])
                 st.session_state["final_report"] = result.get("final_report", "")
                 st.session_state["ranking_explanation"] = result.get("ranking_explanation", "")
+                st.session_state["errors"] = result.get("errors", [])
                 
                 # Render assistant output
                 with st.chat_message("assistant"):

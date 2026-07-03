@@ -159,6 +159,11 @@ The agent interacts with the workspace through schema-defined tools. These tools
   - Inspects candidate profile against requirements.
   - *Returns*: 3-5 technical questions tailored to probe the candidate's gaps (e.g. *"You have extensive Python experience, but the JD requires Kubernetes. Can you explain your exposure to container orchestration?"*).
 
+### D. Protocol-Enabled Search Tools (MCP Mode)
+- **`search_web(query: str) -> Dict`**: Performs live DuckDuckGo web searches for candidate public portfolios, GitHub repositories, or LinkedIn handles.
+- **`search_chroma_db(query: str, limit: int) -> Dict`**: semantic RAG vector store search over ingested resumes, returning candidates, sections, and excerpts.
+- **`fetch_candidate_notes(candidate_name: str) -> Dict`**: Resolves mock screening notes compiled internally by HR coordinators.
+
 ---
 
 ## 4. Multi-Round Screening Pipeline
@@ -244,8 +249,10 @@ A clean markdown table comparing candidates side-by-side:
 To make the Agentic Profile Matching Engine completely independent and production-grade, the files and functionalities from Milestone 1 and Milestone 2 have been structured under the `src/agentic_profile_matching/` packaged namespace:
 - **`fs_tools.py`** (Milestone 1): Filesystem reader for text, DOCX, and PDF formats.
 - **`config.py`, `resume_rag.py`, `job_matcher.py`, `generate_dataset.py`** (Milestone 2): Ingestion, RAG chunking, ChromaDB vector storage, BM25 indexing, and hybrid matching.
+- **`agent/` package** (LangGraph Orchestration): Decoupled package separating state definitions (`state.py`), prompt structures (`prompts.py`), router files (`routers.py`), nodes logic (`nodes.py`), and graph compiler (`__init__.py`).
 - **Clean Absolute Imports**: All modules import each other using standard absolute package-level imports (e.g. `from agentic_profile_matching import config`).
 - **No Path Dependencies**: This eliminates cross-project `sys.path` modifications, ensuring this codebase runs fully standalone and does not break or affect the original Milestone 1 & 2 directories.
+
 
 
 ### B. Free-Tier API & Open-Source LLM Stack
@@ -268,7 +275,54 @@ To proactively prevent 429 rate limit exceptions and TPM/RPM exhaustion on free 
 
 ---
 
-## 8. Project Roadmap & Milestones
+## 8. Model Context Protocol (MCP) & Resiliency Design
+
+The engine features a standardized **Model Context Protocol (MCP)** implementation and comprehensive **production-grade resiliency safeguards** to protect against runtime exceptions, API downtime, or uninitialized state constraints.
+
+### A. Dual-Mode Tool Gateway Architecture
+The system supports a **dual-mode architecture** toggled via `config.USE_MCP` (`USE_MCP=True/False` in `.env` / `config.py`):
+1. **Local/Direct Mode (Default)**: Imports and runs the filesystem utilities synchronously. Requires no background server subprocesses, making local CLI/Streamlit development simple and lightweight.
+2. **MCP Mode**: Launches the filesystem server and search server as subprocesses and routes all file/search transactions through standardized JSON-RPC 2.0 protocol calls.
+
+```mermaid
+graph TD
+    User[Streamlit UI / CLI] --> Agent[matching_agent.py]
+    Agent --> Gateway[fs_client.py: Unified Gateway]
+    
+    Gateway -- Mode: Local --x DirectTools[fs_tools.py: Direct Execution]
+    Gateway -- Mode: MCP --x ClientManager[mcp_client.py: Thread-Safe Client]
+    
+    ClientManager -- stdio (JSON-RPC) --x ServerFS[filesystem_mcp_server.py]
+    ClientManager -- stdio (JSON-RPC) --x ServerSearch[search_mcp_server.py]
+```
+
+### B. MCP Server Specifications
+- **`filesystem_mcp_server.py`**: Built using FastMCP. Registers all Milestone 1 tools (`read_file`, `list_files`, `write_file`, and `search_in_file`). Exposes new production capabilities:
+  - **`watch_directory(directory)`**: Spawns a polling watchdog thread to monitor a directory for new resumes and automatically trigger RAG pipeline ingestion.
+  - **`batch_process(filepaths)`**: Concurrently reads and parses multiple files using a `ThreadPoolExecutor` to speed up candidate loads.
+  - **`resumes://{filename}` Namespace**: Standardized MCP Resource namespace permitting clients to read file contents directly from the server.
+- **`search_mcp_server.py`**: Exposes search tools to demonstrate multi-server coordination and candidate vetting:
+  - **`search_web(query)`**: Integrates keyless live web search using the `duckduckgo_search` library. Leverages structured mock fallback portfolios for sandbox/training candidates who are fictional, and queries public portals in real time for general searches.
+  - **`search_chroma_db(query, limit)`**: Connects to the local candidate vector store to run semantic searches directly over resumes, returning candidate excerpts, section metadata, and similarity scores.
+  - **`fetch_candidate_notes(candidate_name)`**: Fetches internal screening and HR notes.
+
+### C. Persistent Connection Client Manager
+Because MCP is inherently asynchronous (`asyncio`) and LangGraph workflow nodes/Streamlit run synchronously, the client manager (`mcp_client.py`) acts as a bridge:
+- Starts a dedicated background event loop running in a daemon thread.
+- Resolves python paths and launches both server processes on loop start, retaining persistent `ClientSession` connections to avoid the heavy overhead of spawning processes on every tool call.
+- Synchronously schedules coroutines on the loop using `asyncio.run_coroutine_threadsafe()` and returns results.
+- Registers an `atexit` cleaner to guarantee that all subprocesses are cleanly killed on exit, preventing orphan processes.
+
+### D. Production Resiliency Safeguards
+- **Agent State Logger**: Added `errors: List[str]` to `AgentState`. Workflow nodes intercept errors, record them in the log, and fallback gracefully instead of halting execution.
+- **Node Failures & Fallbacks**: If the LLM provider experiences downtime or deep screening fails, the agent populates placeholder assessments (e.g. `strengths=["Semantic match overlap"]`, `gaps=["Deep screening audit skipped due to LLM error"]`) so the UI displays fallback candidate profiles rather than blank cards.
+- **Database Safety**: Wrapped ChromaDB collection loading in a try-except block in `JobMatcher`. If the collection is missing, it is automatically created to prevent crash loops.
+- **Experience Parsing Validation**: Restricts parsed experience years to `0-50` to discard postcodes or phone numbers that occasionally match the experience regex.
+- **Streamlit Warning System**: If any error logs are populated during an agent run, `app.py` catches them and renders explicit yellow `st.warning` boxes under the header.
+
+---
+
+## 9. Project Roadmap & Milestones
 
 The details regarding current implementation progress, release status of phases 1-5, and the long-term backlog of features are tracked in the root [ROADMAP.md](../ROADMAP.md).
 

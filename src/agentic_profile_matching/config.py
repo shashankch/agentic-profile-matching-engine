@@ -1,17 +1,21 @@
 import os
 from pathlib import Path
 from typing import Optional, List, Dict
+from dotenv import load_dotenv
+
+# Load environment variables from .env file at startup
+load_dotenv()
 
 # Base Paths
 BASE_DIR = Path(__file__).resolve().parent.parent
-VECTOR_DB_PATH = str(BASE_DIR / "chroma_db")
-DATA_DIR = BASE_DIR / "data"
-RESUMES_DIR = str(DATA_DIR / "resumes")
-JOB_DESCRIPTIONS_DIR = str(DATA_DIR / "job_descriptions")
+VECTOR_DB_PATH = os.getenv("VECTOR_DB_PATH", str(BASE_DIR / "chroma_db"))
+DATA_DIR = Path(os.getenv("DATA_DIR", str(BASE_DIR / "data")))
+RESUMES_DIR = os.getenv("RESUMES_DIR", str(DATA_DIR / "resumes"))
+JOB_DESCRIPTIONS_DIR = os.getenv("JOB_DESCRIPTIONS_DIR", str(DATA_DIR / "job_descriptions"))
 
 # Embedding Config
-EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-TOP_K = 10
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+TOP_K = int(os.getenv("TOP_K", "10"))
 
 # Supported LLM Models & Providers
 SUPPORTED_PROVIDERS = {
@@ -36,14 +40,28 @@ SUPPORTED_PROVIDERS = {
     ]
 }
 
-DEFAULT_PROVIDER = "Groq"
-DEFAULT_MODEL = "openai/gpt-oss-120b"
-THROTTLE_DELAY = 1.5  # Delay in seconds to prevent hitting LLM rate limits
+DEFAULT_PROVIDER = os.getenv("DEFAULT_PROVIDER", "Groq")
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "openai/gpt-oss-120b")
+THROTTLE_DELAY = float(os.getenv("THROTTLE_DELAY", "1.5"))  # Delay in seconds to prevent hitting LLM rate limits
 
 # Default Candidate Processing Limits
-DEFAULT_COARSE_LIMIT = 10
-DEFAULT_DEEP_LIMIT = 10
-DEFAULT_RECOMMENDATION_LIMIT = 5
+DEFAULT_COARSE_LIMIT = int(os.getenv("DEFAULT_COARSE_LIMIT", "10"))
+DEFAULT_DEEP_LIMIT = int(os.getenv("DEFAULT_DEEP_LIMIT", "10"))
+DEFAULT_RECOMMENDATION_LIMIT = int(os.getenv("DEFAULT_RECOMMENDATION_LIMIT", "5"))
+
+# MCP Protocol Configuration
+USE_MCP = os.getenv("USE_MCP", "False").lower() in ("true", "1", "yes")
+FILESYSTEM_SERVER_PATH = os.getenv(
+    "FILESYSTEM_SERVER_PATH",
+    str(BASE_DIR / "agentic_profile_matching" / "filesystem_mcp_server.py")
+)
+SEARCH_SERVER_PATH = os.getenv(
+    "SEARCH_SERVER_PATH",
+    str(BASE_DIR / "agentic_profile_matching" / "search_mcp_server.py")
+)
+MCP_TIMEOUT = float(os.getenv("MCP_TIMEOUT", "30.0"))
+
+
 
 
 def get_llm_model(

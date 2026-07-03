@@ -25,9 +25,24 @@ This document outlines the phased plan for building the Agentic Profile Matching
    - Create the frontend dashboard (`app.py`) for dual-pane chat and shortlist inspection.
    - Test conversational refinement loops against test recruitment scenarios.
 
+6. **Phase 6: MCP Server & Client Integration** [Completed]
+   - Implement FastMCP filesystem server (`filesystem_mcp_server.py`) exposing files and resource namespaces (`resumes://`).
+   - Add secondary search server (`search_mcp_server.py`) coordinating live web queries and ChromaDB vector calls.
+   - Create synchronous async-bridged manager client (`mcp_client.py`) and unified gateway client (`fs_client.py`).
+
+7. **Phase 7: Modular Graph Refactoring & Codebase Resilience** [Completed]
+   - Break down monolithic 833-line agent file into decoupled packaged folder `agent/` (`state.py`, `prompts.py`, `nodes.py`, `routers.py`, `__init__.py`).
+   - Add try-except bounds, capped experience extraction validation, and warning alert flags in state.
+
+8. **Phase 8: Enterprise Abstractions & Background Workers** [Next Iteration]
+   - Introduce `BaseVectorStore` interfaces to support pluggable ChromaDB, Qdrant, or pgvector.
+   - Migrate state structures to strict Pydantic V2 schemas and structured outputs.
+   - Implement `Celery` + `Redis` worker queue tasks for non-blocking UI operations.
+
 ---
 
 ## 🔮 Future Backlog (Post-Release)
 
 - **Multi-Agent Consensus Loop**: Incorporate independent agent personas (e.g., Technical Screener vs. HR/Sourcing Screener) to run an internal review before final recommendation.
 - **Bias & Fairness Auditing**: Add an automated checker to audit Job Descriptions for inclusive language and flag potential constraint biases.
+

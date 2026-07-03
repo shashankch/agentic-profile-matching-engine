@@ -9,7 +9,7 @@ description = "Production-grade Agentic Profile Matching Engine"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "chromadb",
+    "chromadb>=1.5.9",
     "sentence-transformers",
     "pypdf",
     "python-docx",

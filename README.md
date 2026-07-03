@@ -73,6 +73,7 @@ agentic_profile_matching/
 ├── .github/workflows/ci.yml       # GitHub Actions CI workflow config
 ├── requirements.txt               # Dependencies list
 ├── ROADMAP.md                     # Project implementation roadmap and future backlog
+├── CHANGELOG.md                   # Chronological log of notable changes
 └── README.md                      # Project documentation
 ```
 

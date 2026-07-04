@@ -5,6 +5,10 @@ from typing import Dict
 
 from mcp.server.fastmcp import FastMCP
 
+import warnings
+# Suppress duckduckgo_search library renaming runtime warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*duckduckgo_search.*")
+
 # Add parent directory to sys.path to allow running as script directly
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 

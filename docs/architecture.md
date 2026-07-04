@@ -120,7 +120,9 @@ graph TD;
 3. **`adjust_requirements_node`**:
    - Conversational feedback loop that refines existing job requirements constraints using the recruiter's latest comments/instructions (routes back to `search_resumes` for updated search).
 4. **`conversational_query_node`**:
-   - Answers direct conversational questions from the recruiter (e.g. *"Why did Candidate A rank higher than Candidate B?"* or general portfolio/notes queries) using the active shortlist data without initiating a full search re-ranking.
+   - Answers direct conversational questions from the recruiter (e.g. *"Why did Candidate A rank higher than Candidate B?"*).
+   - Operates as a dynamic tool-calling node (using an isolated ReAct loop) bound to `search_web_tool` and `fetch_candidate_notes_tool` wrappers.
+   - If the query can be answered using the active shortlist data present in the context, it answers directly (0 tool calls). If external information is requested (e.g., searching the web or retrieving internal HR screening files), it invokes the corresponding MCP search server tools on-demand.
 5. **`search_resumes_node`**:
    - Invokes the RAG Hybrid Search engine using the parsed requirements or query term.
    - Pulls candidate resume chunks, metadata, and files using local hybrid match or MCP search client.

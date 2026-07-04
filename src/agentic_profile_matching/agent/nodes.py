@@ -599,11 +599,34 @@ def adjust_requirements_node(state: AgentState) -> Dict[str, Any]:
         print(f"Failed to adjust requirements: {e}")
         return {}
 
+from langchain_core.tools import tool
+from agentic_profile_matching.mcp_client import mcp_client
+
+@tool
+def search_web_tool(query: str) -> str:
+    """
+    Search the web for candidate portfolios, Github repositories, technology news, or general information.
+    """
+    res = mcp_client.call_tool("search", "search_web", {"query": query})
+    if isinstance(res, dict) and "results" in res:
+        return json.dumps(res["results"])
+    return str(res)
+
+@tool
+def fetch_candidate_notes_tool(candidate_name: str) -> str:
+    """
+    Retrieve mock HR coordinator screening notes for a specific candidate name.
+    """
+    res = mcp_client.call_tool("search", "fetch_candidate_notes", {"candidate_name": candidate_name})
+    if isinstance(res, dict) and "notes" in res:
+        return res["notes"]
+    return str(res)
+
 
 def conversational_query_node(state: AgentState) -> Dict[str, Any]:
     """
     Directly answers conversational questions from the recruiter (e.g. comparison queries, rankings explanation)
-    using the active candidate shortlist data.
+    using the active candidate shortlist data, with optional web search and candidate notes tools.
     """
     messages = state.get("messages", [])
     if not messages:
@@ -620,21 +643,56 @@ def conversational_query_node(state: AgentState) -> Dict[str, Any]:
         api_url=state.get("api_url")
     )
     
-    print(f"Executing Conversational Query: '{last_msg}'")
+    print(f"Executing Conversational Query with search tools: '{last_msg}'")
+    
+    tools = [search_web_tool, fetch_candidate_notes_tool]
+    llm_with_tools = llm.bind_tools(tools)
+    
+    import datetime
+    current_date = datetime.date.today().strftime("%B %d, %Y")
 
-    def _call_query():
-        messages_prompt = [
-            SystemMessage(content=CONVERSATIONAL_QUERY_SYSTEM_PROMPT.format(
-                reqs_json=json.dumps(requirements, indent=2),
-                shortlist_json=json.dumps(shortlist, indent=2)
-            )),
-            HumanMessage(content=f"Answer this query: '{last_msg}'")
-        ]
-        return llm.invoke(messages_prompt)
+    sys_prompt = CONVERSATIONAL_QUERY_SYSTEM_PROMPT.format(
+        reqs_json=json.dumps(requirements, indent=2),
+        shortlist_json=json.dumps(shortlist, indent=2)
+    ) + f"\n\nToday's Date: {current_date}.\nYou have access to search tools. Use them ONLY if the user asks for external information (like web search or candidate notes) not present in the current candidate shortlist."
 
+    local_messages = [
+        SystemMessage(content=sys_prompt),
+        HumanMessage(content=f"Answer this query: '{last_msg}'")
+    ]
+    
     try:
-        response = execute_with_retry(_call_query)
-        ai_msg = AIMessage(content=response.content)
+        # ReAct style tool execution loop (max 3 iterations)
+        for attempt in range(3):
+            def _call_llm():
+                return llm_with_tools.invoke(local_messages)
+                
+            response = execute_with_retry(_call_llm)
+            local_messages.append(response)
+            
+            if not response.tool_calls:
+                break
+                
+            for tool_call in response.tool_calls:
+                tool_name = tool_call["name"]
+                args = tool_call["args"]
+                
+                print(f"Agent requested tool call: {tool_name} with args {args}")
+                
+                if tool_name == "search_web_tool":
+                    result = search_web_tool.invoke(args)
+                elif tool_name == "fetch_candidate_notes_tool":
+                    result = fetch_candidate_notes_tool.invoke(args)
+                else:
+                    result = f"Error: Tool '{tool_name}' not found."
+                
+                from langchain_core.messages import ToolMessage
+                local_messages.append(ToolMessage(
+                    content=str(result),
+                    tool_call_id=tool_call["id"]
+                ))
+                
+        ai_msg = AIMessage(content=local_messages[-1].content)
         return {"messages": messages + [ai_msg]}
     except Exception as e:
         print(f"Failed to execute conversational query: {e}")

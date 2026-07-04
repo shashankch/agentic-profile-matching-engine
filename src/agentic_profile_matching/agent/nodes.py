@@ -4,6 +4,9 @@ import json
 from typing import Dict, Any
 
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.tools import tool
+
+from agentic_profile_matching.mcp_client import mcp_client
 
 from agentic_profile_matching import config
 from agentic_profile_matching.fs_client import read_file
@@ -599,8 +602,6 @@ def adjust_requirements_node(state: AgentState) -> Dict[str, Any]:
         print(f"Failed to adjust requirements: {e}")
         return {}
 
-from langchain_core.tools import tool
-from agentic_profile_matching.mcp_client import mcp_client
 
 @tool
 def search_web_tool(query: str) -> str:

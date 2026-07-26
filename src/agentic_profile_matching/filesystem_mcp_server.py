@@ -16,7 +16,7 @@ from agentic_profile_matching.fs_tools import read_file as direct_read_file
 from agentic_profile_matching.fs_tools import list_files as direct_list_files
 from agentic_profile_matching.fs_tools import write_file as direct_write_file
 from agentic_profile_matching.fs_tools import search_in_file as direct_search_in_file
-from agentic_profile_matching.resume_rag import ResumeRAGPipeline
+from agentic_profile_matching.services.ingestion_service import IngestionService
 
 # Configure logging to stderr for MCP compliance
 logging.basicConfig(
@@ -142,7 +142,7 @@ def _directory_watcher_worker(directory: str, poll_interval: float = 2.0):
     except Exception as e:
         logger.error(f"Error initializing watcher cache: {e}")
         
-    pipeline = None
+    ingestion_service = None
     
     while True:
         with _watcher_lock:
@@ -173,13 +173,13 @@ def _directory_watcher_worker(directory: str, poll_interval: float = 2.0):
                     event_type = "New" if is_new else "Modified"
                     logger.info(f"[Watchdog] {event_type} resume detected: {f.name}")
                     
-                    # Auto-ingest into RAG Pipeline to satisfy prod-grade standard
+                    # Auto-ingest via IngestionService boundary
                     try:
-                        if pipeline is None:
-                            pipeline = ResumeRAGPipeline()
+                        if ingestion_service is None:
+                            ingestion_service = IngestionService()
                         logger.info(f"[Watchdog] Triggering auto-ingestion for {f.name}")
-                        pipeline.ingest_directory(directory)
-                        logger.info(f"[Watchdog] Auto-ingestion completed for {f.name}")
+                        result = ingestion_service.ingest_file(f_abs)
+                        logger.info(f"[Watchdog] Auto-ingestion completed for {f.name}: success={result.get('success')}")
                     except Exception as ex:
                         logger.error(f"[Watchdog] RAG auto-ingestion failed for {f.name}: {ex}")
                         

@@ -304,8 +304,9 @@ graph TD
 ```
 
 ### B. MCP Server Specifications
-- **`filesystem_mcp_server.py`**: Built using FastMCP. Registers all Milestone 1 tools (`read_file`, `list_files`, `write_file`, and `search_in_file`). Exposes new production capabilities:
-  - **`watch_directory(directory)`**: Spawns a polling watchdog thread to monitor a directory for new resumes and automatically trigger RAG pipeline ingestion.
+- **`filesystem_mcp_server.py`**: Built using FastMCP. Registers all Milestone 1 tools (`read_file`, `list_files`, `write_file`, and `search_in_file`). Delegates ingestion business logic to the `IngestionService` boundary:
+  - **`IngestionService` (`services/ingestion_service.py`)**: Encapsulates single-file (`ingest_file`) and directory (`ingest_directory`) RAG ingestion mechanics, cleanly separating protocol handlers from vector database operations.
+  - **`watch_directory(directory)`**: Spawns a background watcher thread to monitor directory changes and trigger incremental auto-ingestion via `IngestionService.ingest_file()`.
   - **`batch_process(filepaths)`**: Concurrently reads and parses multiple files using a `ThreadPoolExecutor` to speed up candidate loads.
   - **`resumes://{filename}` Namespace**: Standardized MCP Resource namespace permitting clients to read file contents directly from the server.
 - **`search_mcp_server.py`**: Exposes search tools to demonstrate multi-server coordination and candidate vetting:

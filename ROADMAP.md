@@ -35,15 +35,29 @@ This document outlines the phased plan for building the Agentic Profile Matching
    - Add try-except bounds, capped experience extraction validation, and warning alert flags in state.
    - Integrate automated local pre-commit hooks and GitHub Actions CI code quality lints using [Ruff].
 
-8. **Phase 8: Enterprise Abstractions & Background Workers** [Next Iteration]
-   - Introduce `BaseVectorStore` interfaces to support pluggable vector databases such as **[Qdrant]** or **[pgvector]**.
-   - Migrate state structures to strict Pydantic V2 schemas and integrate **[Instructor]** or **[Outlines]** to guarantee structured LLM output generation.
-   - Implement `[Celery]` + `[Redis]` worker queue tasks for non-blocking UI operations.
+> Each subphase from Phase 8 onwards is delivered as a focused PR including code, tests, and documentation updates. Detailed scope for each PR is tracked in the implementation plan.
 
-9. **Phase 9: Production RAG Evaluation & Observability** [Planned]
-   - Integrate **[Langfuse]** or **[Arize Phoenix]** (fully open-source and self-hostable) for granular LangGraph execution tracing, latency analysis, and local visual debugging.
-   - Incorporate **[Ragas]** or **[DeepEval]** (open-source Python libraries) pipelines to run automated evaluations measuring chunk retrieval recall, response faithfulness, and answer relevance.
-   - Upgrade document ingestion pipelines utilizing **[Unstructured.io]** or **[PyMuPDF]** open-source libraries to parse structured tables and complex layouts from candidate PDF resumes locally without external SaaS APIs.
+8. **Phase 8: Enterprise Abstractions & Background Workers** [Next Iteration]
+   Incrementally delivered across focused subphases, each merged as a separate PR.
+
+   - **8.1 — Protocol / Business Logic Separation** `[Completed]`: Introduce a dedicated `IngestionService` layer to cleanly decouple file-processing business logic from the MCP protocol tool handlers.
+   - **8.2 — Pluggable Vector Store Abstraction** `[Next Up]`: Define a `BaseVectorStore` protocol, implement a default `ChromaVectorStore` with idempotent upsert ingestion and deterministic chunk IDs, and add a `QdrantVectorStore` stub to validate the abstraction boundary.
+   - **8.3 — Store Injection & BM25 Index Caching** `[Planned]`: Wire `BaseVectorStore` into `ResumeRAGPipeline` and `JobMatcher` via constructor injection; cache the BM25 corpus index on construction to eliminate per-query O(n) rebuilds.
+   - **8.4 — Type-Safe State Migration & Security Hardening** `[Planned]`: Migrate `AgentState` to `TypedDict`; migrate LLM output schemas to Pydantic V2 `BaseModel`; remove API credentials from serializable graph state.
+   - **8.5 — Pydantic V2 LLM Output Contracts** `[Planned]`: Replace fragile regex-based JSON parsing of LLM responses with Pydantic V2 `model_validate_json()` with graceful fallback.
+   - **8.6 — Celery + Redis Background Workers** `[Planned]`: Implement [Celery] + [Redis] async task queue for non-blocking deep screening and background ingestion; add Docker Compose orchestration.
+
+9. **Phase 9: Production Observability, RAG Evaluation & Richer Ingestion** [Planned]
+   Incrementally delivered across focused subphases, each merged as a separate PR.
+
+   - **9.1 — Structured Logging & Node Tracing Decorator** `[Planned]`: Introduce structured JSON logging and a `@trace_node` decorator with per-node latency timing and optional [OpenTelemetry] span instrumentation; replace diagnostic `print()` calls throughout.
+   - **9.2 — Langfuse / Arize Phoenix Tracing Integration** `[Planned]`: Integrate **[Langfuse]** or **[Arize Phoenix]** as an opt-in tracing backend wired through the `@trace_node` decorator with zero changes to node logic.
+   - **9.3 — Ragas / DeepEval RAG Evaluation Pipeline** `[Planned]`: Incorporate **[Ragas]** or **[DeepEval]** automated evaluation pipelines measuring chunk retrieval recall, response faithfulness, and answer relevance.
+   - **9.4 — PyMuPDF / Unstructured.io Ingestion Upgrade** `[Planned]`: Upgrade document ingestion using **[PyMuPDF]** or **[Unstructured.io]** for richer PDF layout parsing, plugged cleanly through the `IngestionService` boundary.
+
+10. **Phase 10: Architecture Documentation & Project Closeout** [Planned]
+    - Publish Architecture Decision Records (ADRs) documenting the key design choices made across all phases.
+    - Update `README.md`, `docs/architecture.md`, and supporting docs to reflect the final implementation.
 
 ---
 
@@ -65,8 +79,6 @@ This document outlines the phased plan for building the Agentic Profile Matching
 [Ruff]: https://github.com/astral-sh/ruff
 [Qdrant]: https://qdrant.tech/
 [pgvector]: https://github.com/pgvector/pgvector
-[Instructor]: https://github.com/jxnl/instructor
-[Outlines]: https://github.com/dottxt-ai/outlines
 [Celery]: https://docs.celeryq.dev/
 [Redis]: https://redis.io/
 [Langfuse]: https://langfuse.com/
@@ -75,4 +87,6 @@ This document outlines the phased plan for building the Agentic Profile Matching
 [DeepEval]: https://github.com/confident-ai/deepeval
 [Unstructured.io]: https://unstructured.io/
 [PyMuPDF]: https://github.com/pymupdf/PyMuPDF
+[OpenTelemetry]: https://opentelemetry.io/
+[Pydantic]: https://docs.pydantic.dev/
 

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.4.0] - 2026-07-26
+
+### Added
+- Created `IngestionService` (`services/ingestion_service.py`) to separate candidate resume ingestion business logic from MCP protocol tool handlers.
+- Added comprehensive unit tests for `IngestionService` in `tests/test_ingestion_service.py`.
+
+### Changed
+- Refactored `filesystem_mcp_server.py` watchdog thread to delegate auto-ingestion to `IngestionService.ingest_file()` for single-file incremental ingestion.
+- Updated `docs/architecture.md` to detail the `IngestionService` boundary.
+
 ## [0.3.0] - 2026-07-04
 ### Added
 - Integrated automated local pre-commit hooks and GitHub Actions CI workflow using Ruff for code linting and formatting.
@@ -30,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Built custom assessor screening tools for job requirements extraction, side-by-side matrices, and question generation.
 - Created Streamlit UI dashboard supporting real-time candidate vetting and dual-pane chat logs.
 
+[0.4.0]: https://github.com/shashankch/agentic-profile-matching-engine/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/shashankch/agentic-profile-matching-engine/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/shashankch/agentic-profile-matching-engine/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/shashankch/agentic-profile-matching-engine/releases/tag/v0.1.0

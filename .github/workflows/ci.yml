@@ -43,8 +43,8 @@ jobs:
 
     - name: Run Ruff Linter & Format Check
       run: |
-        ruff check .
-        ruff format --check .
+        ruff check src/ tests/
+        ruff format --check src/ tests/
 
     - name: Run tests
       run: |

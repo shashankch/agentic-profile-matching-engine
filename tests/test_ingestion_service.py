@@ -2,7 +2,7 @@ import unittest
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -14,7 +14,7 @@ class TestIngestionService(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.test_dir_path = Path(self.temp_dir.name)
-        
+
         # Create dummy candidate files
         self.valid_file = self.test_dir_path / "resume_jane_doe.txt"
         self.valid_file.write_text(
@@ -49,15 +49,15 @@ class TestIngestionService(unittest.TestCase):
         """Test successful single file ingestion with mock pipeline."""
         mock_pipeline = MagicMock()
         mock_pipeline.embedder.encode.return_value.tolist.return_value = [0.1, 0.2, 0.3]
-        
+
         service = IngestionService(pipeline=mock_pipeline)
         result = service.ingest_file(str(self.valid_file))
-        
+
         self.assertTrue(result["success"])
         self.assertEqual(result["filename"], "resume_jane_doe.txt")
         self.assertEqual(result["candidate_name"], "Jane Doe")
         self.assertGreater(result["chunks_ingested"], 0)
-        
+
         # Verify collection.add was called on vector store
         self.assertTrue(mock_pipeline.collection.add.called)
 
@@ -65,10 +65,10 @@ class TestIngestionService(unittest.TestCase):
         """Test ingesting an entire directory of resume files."""
         mock_pipeline = MagicMock()
         mock_pipeline.embedder.encode.return_value.tolist.return_value = [0.1, 0.2, 0.3]
-        
+
         service = IngestionService(pipeline=mock_pipeline)
         result = service.ingest_directory(str(self.test_dir_path))
-        
+
         self.assertTrue(result["success"])
         self.assertEqual(result["total_files"], 2)  # valid_file + empty_file
         self.assertEqual(result["successful"], 1)

@@ -155,15 +155,14 @@ def search_in_file(
         context_start = max(0, idx - context_size)
         context_end = min(len(content), idx + len(keyword) + context_size)
 
-        all_matches.append({
-            "position": idx,
-            "context": content[context_start:context_end]
-        })
+        all_matches.append(
+            {"position": idx, "context": content[context_start:context_end]}
+        )
 
         start = idx + len(keyword)
 
     total_matches = len(all_matches)
-    paginated_matches = all_matches[offset:offset + limit]
+    paginated_matches = all_matches[offset : offset + limit]
 
     return {
         "success": True,

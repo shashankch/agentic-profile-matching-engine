@@ -2,8 +2,15 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from agentic_profile_matching.resume_rag import ResumeRAGPipeline, MetadataExtractor, ResumeChunker
-from agentic_profile_matching.fs_tools import read_file as direct_read_file, list_files as direct_list_files
+from agentic_profile_matching.resume_rag import (
+    ResumeRAGPipeline,
+    MetadataExtractor,
+    ResumeChunker,
+)
+from agentic_profile_matching.fs_tools import (
+    read_file as direct_read_file,
+    list_files as direct_list_files,
+)
 
 logger = logging.getLogger("ingestion_service")
 
@@ -37,12 +44,20 @@ class IngestionService:
         path = Path(filepath).resolve()
         if not path.exists() or not path.is_file():
             logger.warning(f"File not found for ingestion: {filepath}")
-            return {"success": False, "filepath": str(path), "error": f"File not found: {filepath}"}
+            return {
+                "success": False,
+                "filepath": str(path),
+                "error": f"File not found: {filepath}",
+            }
 
         data = direct_read_file(str(path))
         if not data.get("success"):
             logger.error(f"Failed to read file for ingestion: {filepath}")
-            return {"success": False, "filepath": str(path), "error": data.get("error", "Read failed")}
+            return {
+                "success": False,
+                "filepath": str(path),
+                "error": data.get("error", "Read failed"),
+            }
 
         text = data.get("content", "")
         if not text or not text.strip():
@@ -107,7 +122,11 @@ class IngestionService:
         dir_path = Path(directory).resolve()
         if not dir_path.exists() or not dir_path.is_dir():
             logger.warning(f"Directory not found for ingestion: {directory}")
-            return {"success": False, "directory": str(dir_path), "error": f"Directory not found: {directory}"}
+            return {
+                "success": False,
+                "directory": str(dir_path),
+                "error": f"Directory not found: {directory}",
+            }
 
         files = direct_list_files(str(dir_path))
         results = []

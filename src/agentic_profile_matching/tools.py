@@ -19,8 +19,14 @@ def execute_with_retry(func, *args, **kwargs):
             return func(*args, **kwargs)
         except Exception as e:
             err_msg = str(e)
-            if "429" in err_msg or "rate_limit" in err_msg.lower() or "too many requests" in err_msg.lower():
-                print(f"Rate limit hit (429). Retrying in {delay:.1f} seconds (Attempt {attempt+1}/{max_retries})...")
+            if (
+                "429" in err_msg
+                or "rate_limit" in err_msg.lower()
+                or "too many requests" in err_msg.lower()
+            ):
+                print(
+                    f"Rate limit hit (429). Retrying in {delay:.1f} seconds (Attempt {attempt + 1}/{max_retries})..."
+                )
                 time.sleep(delay)
                 delay *= 2.0
             else:
@@ -44,25 +50,27 @@ The JSON structure must match this exact format:
     "education_level": "Education level required e.g., Bachelor, Master, PhD, B.Tech, MS (string, or 'Not Specified')",
     "other_constraints": ["Any other critical requirements like visa, locations, certifications (array of strings)"]
 }"""
-    
+
     def _call():
         messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(content=f"Extract requirements for this Job Description:\n\n{jd}")
+            HumanMessage(
+                content=f"Extract requirements for this Job Description:\n\n{jd}"
+            ),
         ]
         response = llm.invoke(messages)
         content = response.content.strip()
-        
+
         # Clean JSON markdown blocks
         if content.startswith("```"):
             content = re.sub(r"^```(?:json)?\n", "", content)
             content = re.sub(r"\n```$", "", content)
-            
-        start_idx = content.find('{')
-        end_idx = content.rfind('}')
+
+        start_idx = content.find("{")
+        end_idx = content.rfind("}")
         if start_idx != -1 and end_idx != -1:
-            content = content[start_idx:end_idx+1]
-            
+            content = content[start_idx : end_idx + 1]
+
         return json.loads(content)
 
     try:
@@ -76,7 +84,7 @@ The JSON structure must match this exact format:
             "nice_to_have_skills": [],
             "min_experience_years": 0,
             "education_level": "Not Specified",
-            "other_constraints": []
+            "other_constraints": [],
         }
 
 
@@ -90,44 +98,85 @@ def compare_candidates(candidate_ids: List[str], shortlist: List[Dict]) -> str:
         # Match by filename stem, candidate_id, or full name
         matched = None
         for c in shortlist:
-            if c['candidate_id'] == c_id or c['name'] == c_id or Path(c['candidate_id']).stem == c_id:
+            if (
+                c["candidate_id"] == c_id
+                or c["name"] == c_id
+                or Path(c["candidate_id"]).stem == c_id
+            ):
                 matched = c
                 break
         if matched and matched not in candidates:
             candidates.append(matched)
-            
+
     # Fallback to compare the top candidates if none were found matching
     if not candidates and len(shortlist) > 0:
         candidates = shortlist[:3]
 
     if not candidates:
         return "No matching candidates found in the shortlist to compare."
-    
+
     # Build Markdown table
-    header_row = "| Match Category | " + " | ".join(f"**{c['name']}**" for c in candidates) + " |"
+    header_row = (
+        "| Match Category | "
+        + " | ".join(f"**{c['name']}**" for c in candidates)
+        + " |"
+    )
     separator_row = "|---| " + " | ".join("---" for _ in candidates) + " |"
-    
+
     rows = [
         ("Match Score", lambda c: f"**{c.get('score', 0)}/100**"),
         ("Experience", lambda c: f"{c.get('experience_years', 0)} Years"),
         ("Education", lambda c: f"{c.get('education', 'Not Specified')}"),
-        ("Matched Skills", lambda c: ", ".join(c.get('matched_skills', [])) if c.get('matched_skills') else "None"),
-        ("Missing Core Skills", lambda c: ", ".join(c.get('missing_skills', [])) if c.get('missing_skills') else "None"),
-        ("Decision Status", lambda c: (
-            ":green[**Strong Hire**]" if "strong" in c.get('screening_status', '').lower()
-            else ":orange[**Borderline Hire**]" if "borderline" in c.get('screening_status', '').lower()
-            else ":red[**Rejected / No-Hire**]" if "reject" in c.get('screening_status', '').lower() or "no-hire" in c.get('screening_status', '').lower()
-            else f"`{c.get('screening_status', 'Screened')}`"
-        )),
-        ("Core Strengths", lambda c: "; ".join(c.get('strengths', [])) if c.get('strengths') else "Not Specified"),
-        ("Identified Gaps", lambda c: "; ".join(c.get('gaps', [])) if c.get('gaps') else "None")
+        (
+            "Matched Skills",
+            lambda c: (
+                ", ".join(c.get("matched_skills", []))
+                if c.get("matched_skills")
+                else "None"
+            ),
+        ),
+        (
+            "Missing Core Skills",
+            lambda c: (
+                ", ".join(c.get("missing_skills", []))
+                if c.get("missing_skills")
+                else "None"
+            ),
+        ),
+        (
+            "Decision Status",
+            lambda c: (
+                ":green[**Strong Hire**]"
+                if "strong" in c.get("screening_status", "").lower()
+                else ":orange[**Borderline Hire**]"
+                if "borderline" in c.get("screening_status", "").lower()
+                else ":red[**Rejected / No-Hire**]"
+                if "reject" in c.get("screening_status", "").lower()
+                or "no-hire" in c.get("screening_status", "").lower()
+                else f"`{c.get('screening_status', 'Screened')}`"
+            ),
+        ),
+        (
+            "Core Strengths",
+            lambda c: (
+                "; ".join(c.get("strengths", []))
+                if c.get("strengths")
+                else "Not Specified"
+            ),
+        ),
+        (
+            "Identified Gaps",
+            lambda c: "; ".join(c.get("gaps", [])) if c.get("gaps") else "None",
+        ),
     ]
-    
+
     table_lines = [header_row, separator_row]
     for label, extractor_fn in rows:
-        line = f"| **{label}** | " + " | ".join(extractor_fn(c) for c in candidates) + " |"
+        line = (
+            f"| **{label}** | " + " | ".join(extractor_fn(c) for c in candidates) + " |"
+        )
         table_lines.append(line)
-        
+
     return "\n".join(table_lines)
 
 
@@ -136,7 +185,7 @@ def generate_interview_questions(
     skills: List[str],
     gaps: List[str],
     requirements: Dict[str, Any],
-    llm
+    llm,
 ) -> List[str]:
     """
     Generates 3-5 technical questions tailored to probe the candidate's gaps.
@@ -150,10 +199,10 @@ Example:
     "Question 1...",
     "Question 2..."
 ]"""
-    
+
     prompt_content = f"""Candidate: {candidate_name}
-Job Title: {requirements.get('title', 'Software Engineer')}
-Must-Have Skills: {requirements.get('must_have_skills', [])}
+Job Title: {requirements.get("title", "Software Engineer")}
+Must-Have Skills: {requirements.get("must_have_skills", [])}
 Candidate Skills: {skills}
 Identified Gaps: {gaps}
 
@@ -162,21 +211,21 @@ Generate 3-5 targeted interview questions."""
     def _call():
         messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(content=prompt_content)
+            HumanMessage(content=prompt_content),
         ]
         response = llm.invoke(messages)
         content = response.content.strip()
-        
+
         # Clean JSON markdown blocks
         if content.startswith("```"):
             content = re.sub(r"^```(?:json)?\n", "", content)
             content = re.sub(r"\n```$", "", content)
-            
-        start_idx = content.find('[')
-        end_idx = content.rfind(']')
+
+        start_idx = content.find("[")
+        end_idx = content.rfind("]")
         if start_idx != -1 and end_idx != -1:
-            content = content[start_idx:end_idx+1]
-            
+            content = content[start_idx : end_idx + 1]
+
         return json.loads(content)
 
     try:
@@ -187,6 +236,6 @@ Generate 3-5 targeted interview questions."""
         fallback = [
             f"Can you tell me about your experience working with {', '.join(gaps) if gaps else 'software engineering architectures'}?",
             "Can you walk me through a complex technical project you engineered and the design tradeoffs you made?",
-            "What strategies do you use when adapting to new tech stacks or programming paradigms on the job?"
+            "What strategies do you use when adapting to new tech stacks or programming paradigms on the job?",
         ]
         return fallback

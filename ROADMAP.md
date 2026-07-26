@@ -7,12 +7,12 @@ This document outlines the phased plan for building the Agentic Profile Matching
 ## 📍 Core Implementation Phases
 
 1. **Phase 1: Environment & Setup** [Completed]
-   - Install dependencies (`langgraph`, `streamlit`, `langchain-groq`, `langchain-google-genai`).
+   - Install dependencies (`[langgraph]`, `[streamlit]`, `[langchain-groq]`, `[langchain-google-genai]`).
    - Create a local `.env` file for credentials (`GROQ_API_KEY`, `GEMINI_API_KEY`).
 
 2. **Phase 2: Dataset Ingestion & Retrieval** [Completed]
    - Generate synthetic candidate resume files (PDF, DOCX, TXT).
-   - Ingest files, generate local embeddings, and populate ChromaDB/BM25 indexes.
+   - Ingest files, generate local embeddings, and populate [ChromaDB] / BM25 indexes.
 
 3. **Phase 3: LangGraph Agent & State Machine** [Completed]
    - Design the `AgentState` schema and setup conversational graph memory.
@@ -25,9 +25,54 @@ This document outlines the phased plan for building the Agentic Profile Matching
    - Create the frontend dashboard (`app.py`) for dual-pane chat and shortlist inspection.
    - Test conversational refinement loops against test recruitment scenarios.
 
+6. **Phase 6: MCP Server & Client Integration** [Completed]
+   - Implement [FastMCP] filesystem server (`filesystem_mcp_server.py`) exposing files and resource namespaces (`resumes://`).
+   - Add secondary search server (`search_mcp_server.py`) coordinating live web queries and ChromaDB vector calls.
+   - Create synchronous async-bridged manager client (`mcp_client.py`) and unified gateway client (`fs_client.py`).
+
+7. **Phase 7: Modular Graph Refactoring & Codebase Resilience** [Completed]
+   - Break down monolithic 833-line agent file into decoupled packaged folder `agent/` (`state.py`, `prompts.py`, `nodes.py`, `routers.py`, `__init__.py`).
+   - Add try-except bounds, capped experience extraction validation, and warning alert flags in state.
+   - Integrate automated local pre-commit hooks and GitHub Actions CI code quality lints using [Ruff].
+
+8. **Phase 8: Enterprise Abstractions & Background Workers** [Next Iteration]
+   - Introduce `BaseVectorStore` interfaces to support pluggable vector databases such as **[Qdrant]** or **[pgvector]**.
+   - Migrate state structures to strict Pydantic V2 schemas and integrate **[Instructor]** or **[Outlines]** to guarantee structured LLM output generation.
+   - Implement `[Celery]` + `[Redis]` worker queue tasks for non-blocking UI operations.
+
+9. **Phase 9: Production RAG Evaluation & Observability** [Planned]
+   - Integrate **[Langfuse]** or **[Arize Phoenix]** (fully open-source and self-hostable) for granular LangGraph execution tracing, latency analysis, and local visual debugging.
+   - Incorporate **[Ragas]** or **[DeepEval]** (open-source Python libraries) pipelines to run automated evaluations measuring chunk retrieval recall, response faithfulness, and answer relevance.
+   - Upgrade document ingestion pipelines utilizing **[Unstructured.io]** or **[PyMuPDF]** open-source libraries to parse structured tables and complex layouts from candidate PDF resumes locally without external SaaS APIs.
+
 ---
 
 ## 🔮 Future Backlog (Post-Release)
 
 - **Multi-Agent Consensus Loop**: Incorporate independent agent personas (e.g., Technical Screener vs. HR/Sourcing Screener) to run an internal review before final recommendation.
 - **Bias & Fairness Auditing**: Add an automated checker to audit Job Descriptions for inclusive language and flag potential constraint biases.
+
+---
+
+<!-- References -->
+
+[langgraph]: https://langchain-ai.github.io/langgraph/
+[streamlit]: https://streamlit.io/
+[langchain-groq]: https://github.com/langchain-ai/langchain/tree/master/libs/partners/groq
+[langchain-google-genai]: https://github.com/langchain-ai/langchain/tree/master/libs/partners/google-genai
+[ChromaDB]: https://www.trychroma.com/
+[FastMCP]: https://github.com/modelcontextprotocol/python-sdk
+[Ruff]: https://github.com/astral-sh/ruff
+[Qdrant]: https://qdrant.tech/
+[pgvector]: https://github.com/pgvector/pgvector
+[Instructor]: https://github.com/jxnl/instructor
+[Outlines]: https://github.com/dottxt-ai/outlines
+[Celery]: https://docs.celeryq.dev/
+[Redis]: https://redis.io/
+[Langfuse]: https://langfuse.com/
+[Arize Phoenix]: https://phoenix.arize.com/
+[Ragas]: https://github.com/explodinggradients/ragas
+[DeepEval]: https://github.com/confident-ai/deepeval
+[Unstructured.io]: https://unstructured.io/
+[PyMuPDF]: https://github.com/pymupdf/PyMuPDF
+

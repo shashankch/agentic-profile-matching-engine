@@ -31,10 +31,10 @@ graph LR
 The LangGraph `State` is defined as a Python dictionary (or Pydantic class) representing the shared memory of the graph execution. It tracks history, constraints, and current results:
 
 ```python
-from typing import TypedDict, List, Dict, Any
+from typing import Dict, List, Any, Optional
 from langchain_core.messages import BaseMessage
 
-class JobRequirements(TypedDict):
+class JobRequirements(Dict):
     title: str
     must_have_skills: List[str]
     nice_to_have_skills: List[str]
@@ -42,8 +42,8 @@ class JobRequirements(TypedDict):
     education_level: str
     other_constraints: List[str]
 
-class CandidateMatch(TypedDict):
-    candidate_id: str  # Filename/Path
+class CandidateMatch(Dict):
+    candidate_id: str
     name: str
     score: int
     matched_skills: List[str]
@@ -54,85 +54,92 @@ class CandidateMatch(TypedDict):
     strengths: List[str]
     gaps: List[str]
     improvement_suggestions: str
-    screening_status: str  # "Shortlisted" | "Screened" | "Borderline" | "Rejected"
+    screening_status: str
     screening_reasoning: str
+    interview_questions: List[str]
 
-class AgentState(TypedDict):
-    # 1. Conversation History
+class AgentState(Dict):
     messages: List[BaseMessage]
-    
-    # 2. Extracted/Refined Job Requirements
     requirements: JobRequirements
-    
-    # 3. Current Shortlist & Candidate Profiles
     shortlist: List[CandidateMatch]
-    
-    # 3.5. Previous Shortlist & Ranking Change Explanations
     previous_shortlist: List[CandidateMatch]
     ranking_explanation: str
-    
-    # 4. Screening Round Control
-    current_round: int  # 1 (Coarse Filter) | 2 (Deep Screen) | 3 (Final Decision)
-    
-    # 5. Report Generation Output
+    coarse_screen_limit: Optional[int]
+    deep_screen_limit: Optional[int]
+    recommendation_limit: Optional[int]
+    current_round: int
     final_report: str
-    
-    # 6. Human Feedback Flag/Input
     feedback_pending: bool
     user_feedback: str
+    llm_provider: str
+    llm_model: str
+    api_key: str
+    api_url: Optional[str]
+    errors: List[str]
 ```
 
 ### B. Graph State Machine Workflow
 The execution flows through specialized nodes that handle requirements parsing, retrieval, ranking, deep screening, report generation, and interaction:
 
 ```mermaid
-stateDiagram-v2
-    [*] --> START
-    START --> PARSE_INPUT : Receive query or JD
-    PARSE_INPUT --> EXTRACT_REQ : Extract Requirements
-    EXTRACT_REQ --> SEARCH_RESUMES : Retrieve via Hybrid Search
-    SEARCH_RESUMES --> RANK_CANDIDATES : Coarse Scoring (Round 1)
-    RANK_CANDIDATES --> SCREEN_ROUND : Current Round > 1?
-    
-    state SCREEN_ROUND {
-        [*] --> DEEP_ANALYSIS : Round 2 (Top 10 profile analysis)
-        DEEP_ANALYSIS --> GENERATE_RECOMMENDATIONS : Round 3 (Hire/No-hire decisions)
-    }
-    
-    SCREEN_ROUND --> GENERATE_REPORT : Generate detailed reports
-    GENERATE_REPORT --> HUMAN_FEEDBACK_LOOP : Wait for user instruction
-    
-    HUMAN_FEEDBACK_LOOP --> ADJUST_REQ : User refines requirements/feedback
-    ADJUST_REQ --> RANK_CANDIDATES : Re-rank and Re-evaluate
-    
-    HUMAN_FEEDBACK_LOOP --> END : Accept final shortlist & report
-    END --> [*]
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	parse_input(parse_input)
+	extract_requirements(extract_requirements)
+	adjust_requirements(adjust_requirements)
+	conversational_query(conversational_query)
+	search_resumes(search_resumes)
+	rank_candidates(rank_candidates)
+	deep_screen(deep_screen)
+	recommendation(recommendation)
+	generate_report(generate_report)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> parse_input;
+	adjust_requirements --> search_resumes;
+	deep_screen --> recommendation;
+	extract_requirements --> search_resumes;
+	parse_input -.-> adjust_requirements;
+	parse_input -.-> conversational_query;
+	parse_input -.-> extract_requirements;
+	rank_candidates --> deep_screen;
+	recommendation --> generate_report;
+	search_resumes --> rank_candidates;
+	conversational_query --> __end__;
+	generate_report --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc
 ```
 
 ### C. Graph Nodes & Logic Specification
 1. **`parse_input_node`**:
    - Inspects the latest user message.
-   - Detects whether the user provided a raw text Job Description (JD) or a simple conversational query (e.g. *"Give me React developers with 3+ years experience"*).
+   - Decides whether the input is a raw Job Description (routes to `extract_requirements`), a refinement instruction (routes to `adjust_requirements`), or a general question (routes to `conversational_query`).
 2. **`extract_requirements_node`**:
-   - Calls the LLM (or `extract_requirements` tool) to parse must-have vs. nice-to-have skills, experience bounds, and target education.
-   - Merges newly extracted requirements with the existing `requirements` in state (supporting additive refinements).
-3. **`search_resumes_node`**:
+   - Calls the LLM (via `extract_requirements` tool) to parse must-have vs. nice-to-have skills, experience bounds, and target education from a new Job Description.
+3. **`adjust_requirements_node`**:
+   - Conversational feedback loop that refines existing job requirements constraints using the recruiter's latest comments/instructions (routes back to `search_resumes` for updated search).
+4. **`conversational_query_node`**:
+   - Answers direct conversational questions from the recruiter (e.g. *"Why did Candidate A rank higher than Candidate B?"*).
+   - Operates as a dynamic tool-calling node (using an isolated ReAct loop) bound to `search_web_tool` and `fetch_candidate_notes_tool` wrappers.
+   - If the query can be answered using the active shortlist data present in the context, it answers directly (0 tool calls). If external information is requested (e.g., searching the web or retrieving internal HR screening files), it invokes the corresponding MCP search server tools on-demand.
+5. **`search_resumes_node`**:
    - Invokes the RAG Hybrid Search engine using the parsed requirements or query term.
-   - Pulls candidate resume chunks, metadata, and files using Milestone 1 & 2 tools.
-4. **`rank_candidates_node` (Round 1 - Coarse Filtering)**:
+   - Pulls candidate resume chunks, metadata, and files using local hybrid match or MCP search client.
+6. **`rank_candidates_node` (Round 1 - Coarse Filtering)**:
    - Computes initial candidate ranks by aggregating retrieval match scores (60% semantic + 40% BM25 keyword score) and applying hard constraints (e.g., must-have skills, minimum experience).
-   - Populates the state's `shortlist` with the top-scoring candidates (typically top 10 from the collection).
-5. **`deep_screen_node` (Round 2 - Profile Deep Analysis)**:
-   - For candidates in the top-tier, this node performs deep inspection.
-   - Reads full resumes (via `read_file` tool), highlights specific strengths, lists skills gaps, and writes contextual improvement suggestions for borderline candidates.
-6. **`recommendation_node` (Round 3 - Hiring Decisions & Questions)**:
-   - Makes final Hire / No-Hire recommendation.
-   - Generates candidate-specific screening/interview questions targeting identified gaps.
-7. **`generate_report_node`**:
-   - Compiles the final ranked list, matching details, comparisons, and custom questions into a markdown formatted report.
-8. **`human_feedback_loop_node`**:
-   - Pauses the graph (using LangGraph checkpoints/interrupts) and returns control to the user.
-   - Once the user submits feedback (e.g., *"Make AWS a must-have skill and re-rank"*), it routes execution back to the `adjust_requirements_node`.
+   - Slices the shortlist to the top candidates (typically top 10) to limit downstream token consumption.
+7. **`deep_screen_node` (Round 2 - Profile Deep Analysis)**:
+   - Evaluates top-tier candidate resumes sequentially using deep LLM text analysis.
+   - Extracts specific strengths, identifies skill gaps, and writes contextual improvement suggestions.
+8. **`recommendation_node` (Round 3 - Hiring Decisions & Questions)**:
+   - Makes final Hire / Borderline / Rejected recommendation based on candidate scores.
+   - Generates candidate-specific technical screening questions targeting identified gaps.
+9. **`generate_report_node`**:
+   - Compiles the final ranked list, matching details, side-by-side comparison matrix, and custom interview questions into a comprehensive markdown report. Appends a conversational summary back to the state messages.
+
+**Human Feedback Loop Execution**:
+The workflow does not halt inside a node of the graph. Instead, state persistence and human interaction are managed by the Streamlit application using LangGraph `MemorySaver` checkpointers. When a recruiter inputs new feedback or questions, the application triggers a new graph run under the same `thread_id` session, sending the input back to `parse_input_node` to determine the routing path.
 
 ---
 
@@ -149,15 +156,20 @@ The agent interacts with the workspace through schema-defined tools. These tools
 - **`rag_hybrid_search(query: str, limit: int, min_experience: Optional[int], must_have_skills: Optional[List[str]])`**: Runs the 60/40 semantic-lexical hybrid search against ChromaDB, applying constraints at the retrieval layer.
 
 ### C. New AI-Assisted Assessment Tools
-- **`extract_requirements(jd: str) -> Dict[str, Any]`**:
+- **`extract_requirements(jd: str, llm) -> Dict[str, Any]`**:
   - LLM parses structured requirements from unstructured JDs.
-  - *Returns*: `{"title": str, "must_have_skills": [], "nice_to_have_skills": [], "experience": int, "education": str}`.
-- **`compare_candidates(candidate_ids: List[str]) -> str`**:
+  - *Returns*: `{"title": str, "must_have_skills": [], "nice_to_have_skills": [], "min_experience_years": int, "education_level": str, "other_constraints": []}`.
+- **`compare_candidates(candidate_ids: List[str], shortlist: List[Dict]) -> str`**:
   - Summarizes profiles head-to-head.
-  - *Returns*: A structured Markdown grid comparing Candidates on: Experience, Match Score, Match Skills, Missing Skills, and Education.
-- **`generate_interview_questions(candidate_id: str) -> List[str]`**:
+  - *Returns*: A structured Markdown comparison table grid comparing Candidates on: Experience, Match Score, Match Skills, Missing Skills, and Education.
+- **`generate_interview_questions(candidate_name: str, skills: List[str], gaps: List[str], requirements: Dict[str, Any], llm) -> List[str]`**:
   - Inspects candidate profile against requirements.
-  - *Returns*: 3-5 technical questions tailored to probe the candidate's gaps (e.g. *"You have extensive Python experience, but the JD requires Kubernetes. Can you explain your exposure to container orchestration?"*).
+  - *Returns*: 3-5 technical questions tailored to probe the candidate's gaps (e.g., *"You have extensive Python experience, but the JD requires Kubernetes. Can you explain your exposure to container orchestration?"*).
+
+### D. Protocol-Enabled Search Tools (MCP Mode)
+- **`search_web(query: str) -> Dict`**: Performs live DuckDuckGo web searches for candidate public portfolios, GitHub repositories, or LinkedIn handles.
+- **`search_chroma_db(query: str, limit: int) -> Dict`**: semantic RAG vector store search over ingested resumes, returning candidates, sections, and excerpts.
+- **`fetch_candidate_notes(candidate_name: str) -> Dict`**: Resolves mock screening notes compiled internally by HR coordinators.
 
 ---
 
@@ -244,8 +256,10 @@ A clean markdown table comparing candidates side-by-side:
 To make the Agentic Profile Matching Engine completely independent and production-grade, the files and functionalities from Milestone 1 and Milestone 2 have been structured under the `src/agentic_profile_matching/` packaged namespace:
 - **`fs_tools.py`** (Milestone 1): Filesystem reader for text, DOCX, and PDF formats.
 - **`config.py`, `resume_rag.py`, `job_matcher.py`, `generate_dataset.py`** (Milestone 2): Ingestion, RAG chunking, ChromaDB vector storage, BM25 indexing, and hybrid matching.
+- **`agent/` package** (LangGraph Orchestration): Decoupled package separating state definitions (`state.py`), prompt structures (`prompts.py`), router files (`routers.py`), nodes logic (`nodes.py`), and graph compiler (`__init__.py`).
 - **Clean Absolute Imports**: All modules import each other using standard absolute package-level imports (e.g. `from agentic_profile_matching import config`).
 - **No Path Dependencies**: This eliminates cross-project `sys.path` modifications, ensuring this codebase runs fully standalone and does not break or affect the original Milestone 1 & 2 directories.
+
 
 
 ### B. Free-Tier API & Open-Source LLM Stack
@@ -268,7 +282,54 @@ To proactively prevent 429 rate limit exceptions and TPM/RPM exhaustion on free 
 
 ---
 
-## 8. Project Roadmap & Milestones
+## 8. Model Context Protocol (MCP) & Resiliency Design
+
+The engine features a standardized **Model Context Protocol (MCP)** implementation and comprehensive **production-grade resiliency safeguards** to protect against runtime exceptions, API downtime, or uninitialized state constraints.
+
+### A. Dual-Mode Tool Gateway Architecture
+The system supports a **dual-mode architecture** toggled via `config.USE_MCP` (`USE_MCP=True/False` in `.env` / `config.py`):
+1. **Local/Direct Mode (Default)**: Imports and runs the filesystem utilities synchronously. Requires no background server subprocesses, making local CLI/Streamlit development simple and lightweight.
+2. **MCP Mode**: Launches the filesystem server and search server as subprocesses and routes all file/search transactions through standardized JSON-RPC 2.0 protocol calls.
+
+```mermaid
+graph TD
+    User[Streamlit UI / CLI] --> Agent[matching_agent.py]
+    Agent --> Gateway[fs_client.py: Unified Gateway]
+    
+    Gateway -- Mode: Local --x DirectTools[fs_tools.py: Direct Execution]
+    Gateway -- Mode: MCP --x ClientManager[mcp_client.py: Thread-Safe Client]
+    
+    ClientManager -- stdio (JSON-RPC) --x ServerFS[filesystem_mcp_server.py]
+    ClientManager -- stdio (JSON-RPC) --x ServerSearch[search_mcp_server.py]
+```
+
+### B. MCP Server Specifications
+- **`filesystem_mcp_server.py`**: Built using FastMCP. Registers all Milestone 1 tools (`read_file`, `list_files`, `write_file`, and `search_in_file`). Exposes new production capabilities:
+  - **`watch_directory(directory)`**: Spawns a polling watchdog thread to monitor a directory for new resumes and automatically trigger RAG pipeline ingestion.
+  - **`batch_process(filepaths)`**: Concurrently reads and parses multiple files using a `ThreadPoolExecutor` to speed up candidate loads.
+  - **`resumes://{filename}` Namespace**: Standardized MCP Resource namespace permitting clients to read file contents directly from the server.
+- **`search_mcp_server.py`**: Exposes search tools to demonstrate multi-server coordination and candidate vetting:
+  - **`search_web(query)`**: Integrates keyless live web search using the `duckduckgo_search` library. Leverages structured mock fallback portfolios for sandbox/training candidates who are fictional, and queries public portals in real time for general searches.
+  - **`search_chroma_db(query, limit)`**: Connects to the local candidate vector store to run semantic searches directly over resumes, returning candidate excerpts, section metadata, and similarity scores.
+  - **`fetch_candidate_notes(candidate_name)`**: Fetches internal screening and HR notes.
+
+### C. Persistent Connection Client Manager
+Because MCP is inherently asynchronous (`asyncio`) and LangGraph workflow nodes/Streamlit run synchronously, the client manager (`mcp_client.py`) acts as a bridge:
+- Starts a dedicated background event loop running in a daemon thread.
+- Resolves python paths and launches both server processes on loop start, retaining persistent `ClientSession` connections to avoid the heavy overhead of spawning processes on every tool call.
+- Synchronously schedules coroutines on the loop using `asyncio.run_coroutine_threadsafe()` and returns results.
+- Registers an `atexit` cleaner to guarantee that all subprocesses are cleanly killed on exit, preventing orphan processes.
+
+### D. Production Resiliency Safeguards
+- **Agent State Logger**: Added `errors: List[str]` to `AgentState`. Workflow nodes intercept errors, record them in the log, and fallback gracefully instead of halting execution.
+- **Node Failures & Fallbacks**: If the LLM provider experiences downtime or deep screening fails, the agent populates placeholder assessments (e.g. `strengths=["Semantic match overlap"]`, `gaps=["Deep screening audit skipped due to LLM error"]`) so the UI displays fallback candidate profiles rather than blank cards.
+- **Database Safety**: Wrapped ChromaDB collection loading in a try-except block in `JobMatcher`. If the collection is missing, it is automatically created to prevent crash loops.
+- **Experience Parsing Validation**: Restricts parsed experience years to `0-50` to discard postcodes or phone numbers that occasionally match the experience regex.
+- **Streamlit Warning System**: If any error logs are populated during an agent run, `app.py` catches them and renders explicit yellow `st.warning` boxes under the header.
+
+---
+
+## 9. Project Roadmap & Milestones
 
 The details regarding current implementation progress, release status of phases 1-5, and the long-term backlog of features are tracked in the root [ROADMAP.md](../ROADMAP.md).
 

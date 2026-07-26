@@ -1,13 +1,10 @@
 import os
-import sys
-from pathlib import Path
 from dotenv import load_dotenv
 
 # Load env variables
 load_dotenv()
-from agentic_profile_matching import config
-from agentic_profile_matching.matching_agent import matching_agent_workflow
-from langchain_core.messages import HumanMessage
+from agentic_profile_matching.matching_agent import matching_agent_workflow  # noqa: E402
+from langchain_core.messages import HumanMessage  # noqa: E402
 
 # Scenario JD
 TEST_JD = """
@@ -63,7 +60,7 @@ def run_scenarios():
             print(f"     Strengths: {c['strengths']}")
             print(f"     Gaps: {c['gaps']}")
         if c.get("interview_questions"):
-            print(f"     Tailored Questions:")
+            print("     Tailored Questions:")
             for q in c["interview_questions"]:
                 print(f"       - {q}")
         print()

@@ -1,12 +1,11 @@
 import re
-import json
 from pathlib import Path
 from typing import Dict, List, Optional
 from sentence_transformers import SentenceTransformer
 import chromadb
 
 from agentic_profile_matching import config
-from agentic_profile_matching.fs_tools import list_files, read_file
+from agentic_profile_matching.fs_client import list_files, read_file
 
 SECTION_HEADERS = [
     'EXPERIENCE', 'WORK EXPERIENCE', 'EDUCATION', 'SKILLS', 'PROJECTS', 
@@ -79,7 +78,9 @@ class MetadataExtractor:
                     years.append(int(m))
                 except ValueError:
                     pass
-        return max(years, default=0)
+        # Validate years of experience to cap it at 50 to filter out phone numbers/postcodes/years (e.g. 2024)
+        valid_years = [y for y in years if 0 <= y <= 50]
+        return max(valid_years, default=0)
 
     def extract_education(self, text: str) -> str:
         edu_keywords = ["B.S.", "B.S", "B.Tech", "M.S.", "M.S", "M.Tech", "Ph.D.", "PhD", "Bachelor", "Master", "B.A.", "B.A", "M.A.", "M.A"]

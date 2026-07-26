@@ -1,7 +1,7 @@
 import re
 import time
 import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from pathlib import Path
 from langchain_core.messages import SystemMessage, HumanMessage
 
@@ -114,9 +114,9 @@ def compare_candidates(candidate_ids: List[str], shortlist: List[Dict]) -> str:
         ("Matched Skills", lambda c: ", ".join(c.get('matched_skills', [])) if c.get('matched_skills') else "None"),
         ("Missing Core Skills", lambda c: ", ".join(c.get('missing_skills', [])) if c.get('missing_skills') else "None"),
         ("Decision Status", lambda c: (
-            f":green[**Strong Hire**]" if "strong" in c.get('screening_status', '').lower()
-            else f":orange[**Borderline Hire**]" if "borderline" in c.get('screening_status', '').lower()
-            else f":red[**Rejected / No-Hire**]" if "reject" in c.get('screening_status', '').lower() or "no-hire" in c.get('screening_status', '').lower()
+            ":green[**Strong Hire**]" if "strong" in c.get('screening_status', '').lower()
+            else ":orange[**Borderline Hire**]" if "borderline" in c.get('screening_status', '').lower()
+            else ":red[**Rejected / No-Hire**]" if "reject" in c.get('screening_status', '').lower() or "no-hire" in c.get('screening_status', '').lower()
             else f"`{c.get('screening_status', 'Screened')}`"
         )),
         ("Core Strengths", lambda c: "; ".join(c.get('strengths', [])) if c.get('strengths') else "Not Specified"),

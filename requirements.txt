@@ -1,4 +1,4 @@
-chromadb
+chromadb>=1.5.9
 sentence-transformers
 pypdf
 python-docx
@@ -11,4 +11,4 @@ langchain-community
 langchain-groq
 langchain-google-genai
 langchain-openai
-
+mcp

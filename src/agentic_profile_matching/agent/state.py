@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional
 from langchain_core.messages import BaseMessage
 
+
 class JobRequirements(Dict):
     title: str
     must_have_skills: List[str]

@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0.0", "wheel"]
+requires = ["setuptools>=83.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentic_profile_matching"
-version = "0.1.0"
+version = "0.4.0"
 description = "Production-grade Agentic Profile Matching Engine"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -29,3 +29,13 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["agentic_profile_matching*"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+extend-exclude = ["docs", "*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E501", "W293"]
+

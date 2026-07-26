@@ -15,7 +15,7 @@ def read_file(filepath: str) -> Dict:
     if getattr(config, "USE_MCP", False):
         logger.info(f"[fs_client] Routing read_file to MCP filesystem server for path: {filepath}")
         return mcp_client.call_tool("filesystem", "read_file", {"filepath": filepath})
-    
+
     logger.info(f"[fs_client] Routing read_file directly (local mode) for path: {filepath}")
     return fs_tools.read_file(filepath)
 
@@ -27,7 +27,7 @@ def list_files(directory: str, extension: Optional[str] = None) -> List[Dict]:
     if getattr(config, "USE_MCP", False):
         logger.info(f"[fs_client] Routing list_files to MCP filesystem server for dir: {directory}")
         return mcp_client.call_tool("filesystem", "list_files", {"directory": directory, "extension": extension})
-    
+
     logger.info(f"[fs_client] Routing list_files directly (local mode) for dir: {directory}")
     return fs_tools.list_files(directory, extension)
 
@@ -39,7 +39,7 @@ def write_file(filepath: str, content: str) -> Dict:
     if getattr(config, "USE_MCP", False):
         logger.info(f"[fs_client] Routing write_file to MCP filesystem server for path: {filepath}")
         return mcp_client.call_tool("filesystem", "write_file", {"filepath": filepath, "content": content})
-    
+
     logger.info(f"[fs_client] Routing write_file directly (local mode) for path: {filepath}")
     return fs_tools.write_file(filepath, content)
 
@@ -49,7 +49,7 @@ def search_in_file(
     keyword: str,
     context_size: int = 150,
     limit: int = 10,
-    offset: int = 0
+    offset: int = 0,
 ) -> Dict:
     """
     Search text inside file. Uses MCP if enabled, otherwise falls back to direct local execution.
@@ -57,17 +57,17 @@ def search_in_file(
     if getattr(config, "USE_MCP", False):
         logger.info(f"[fs_client] Routing search_in_file to MCP filesystem server for: {filepath}")
         return mcp_client.call_tool(
-            "filesystem", 
-            "search_in_file", 
+            "filesystem",
+            "search_in_file",
             {
                 "filepath": filepath,
                 "keyword": keyword,
                 "context_size": context_size,
                 "limit": limit,
-                "offset": offset
-            }
+                "offset": offset,
+            },
         )
-    
+
     logger.info(f"[fs_client] Routing search_in_file directly (local mode) for: {filepath}")
     return fs_tools.search_in_file(filepath, keyword, context_size, limit, offset)
 
@@ -75,6 +75,7 @@ def search_in_file(
 # ----------------------------------------------------
 # New Capabilities (Exposed through Gateway)
 # ----------------------------------------------------
+
 
 def watch_directory(directory: str) -> Dict:
     """
@@ -85,10 +86,13 @@ def watch_directory(directory: str) -> Dict:
     if getattr(config, "USE_MCP", False):
         logger.info(f"[fs_client] Routing watch_directory to MCP filesystem server: {directory}")
         return mcp_client.call_tool("filesystem", "watch_directory", {"directory": directory})
-    
+
     logger.info(f"[fs_client] Starting local watch_directory background monitor (local mode) for: {directory}")
     # Reuse the watch logic by importing from the server module dynamically, or spawning a thread locally
-    from agentic_profile_matching.filesystem_mcp_server import watch_directory as server_watch
+    from agentic_profile_matching.filesystem_mcp_server import (
+        watch_directory as server_watch,
+    )
+
     return server_watch(directory)
 
 
@@ -104,7 +108,10 @@ def batch_process(filepaths: List[str]) -> List[Dict]:
         if isinstance(res, dict):
             return [res]
         return res
-    
+
     logger.info(f"[fs_client] Running local batch_process concurrently (local mode) for {len(filepaths)} files")
-    from agentic_profile_matching.filesystem_mcp_server import batch_process as server_batch
+    from agentic_profile_matching.filesystem_mcp_server import (
+        batch_process as server_batch,
+    )
+
     return server_batch(filepaths)

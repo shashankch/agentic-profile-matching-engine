@@ -16,11 +16,12 @@ st.set_page_config(
     page_title="AI Recruiter - Agentic Profile Matching",
     page_icon="💼",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 # Custom premium styling
-st.markdown("""
+st.markdown(
+    """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
@@ -177,7 +178,9 @@ st.markdown("""
         transform: translateY(0) !important;
     }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 # Initialize Session State Variables
@@ -190,7 +193,7 @@ if "requirements" not in st.session_state:
         "nice_to_have_skills": [],
         "min_experience_years": 0,
         "education_level": "Not Specified",
-        "other_constraints": []
+        "other_constraints": [],
     }
 if "shortlist" not in st.session_state:
     st.session_state["shortlist"] = []
@@ -237,10 +240,25 @@ if llm_provider == "Custom (OpenAI-compatible)":
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 2. Throttling & Limits Control")
 with st.sidebar.expander("⚙️ Limit Configurations (RPM/TPM Optimization)"):
-    coarse_limit = st.slider("Round 1: Coarse Limit", min_value=5, max_value=20, value=int(st.session_state["coarse_limit"]))
-    deep_limit = st.slider("Round 2: Deep Screen Limit", min_value=3, max_value=15, value=int(st.session_state["deep_limit"]))
-    recommendation_limit = st.slider("Round 3: Recommendation Limit", min_value=2, max_value=10, value=int(st.session_state["recommendation_limit"]))
-    
+    coarse_limit = st.slider(
+        "Round 1: Coarse Limit",
+        min_value=5,
+        max_value=20,
+        value=int(st.session_state["coarse_limit"]),
+    )
+    deep_limit = st.slider(
+        "Round 2: Deep Screen Limit",
+        min_value=3,
+        max_value=15,
+        value=int(st.session_state["deep_limit"]),
+    )
+    recommendation_limit = st.slider(
+        "Round 3: Recommendation Limit",
+        min_value=2,
+        max_value=10,
+        value=int(st.session_state["recommendation_limit"]),
+    )
+
     st.session_state["coarse_limit"] = coarse_limit
     st.session_state["deep_limit"] = deep_limit
     st.session_state["recommendation_limit"] = recommendation_limit
@@ -252,9 +270,20 @@ st.sidebar.markdown("### 3. Active Requirements Constraints")
 reqs = st.session_state["requirements"]
 
 title_input = st.sidebar.text_input("Extracted Job Title", value=reqs.get("title", "Software Engineer"))
-min_exp_slider = st.sidebar.slider("Min Experience Years", min_value=0, max_value=20, value=int(reqs.get("min_experience_years", 0)))
-must_have_input = st.sidebar.text_area("Must-Have Skills (comma separated)", value=", ".join(reqs.get("must_have_skills", [])))
-nice_have_input = st.sidebar.text_area("Nice-To-Have Skills (comma separated)", value=", ".join(reqs.get("nice_to_have_skills", [])))
+min_exp_slider = st.sidebar.slider(
+    "Min Experience Years",
+    min_value=0,
+    max_value=20,
+    value=int(reqs.get("min_experience_years", 0)),
+)
+must_have_input = st.sidebar.text_area(
+    "Must-Have Skills (comma separated)",
+    value=", ".join(reqs.get("must_have_skills", [])),
+)
+nice_have_input = st.sidebar.text_area(
+    "Nice-To-Have Skills (comma separated)",
+    value=", ".join(reqs.get("nice_to_have_skills", [])),
+)
 education_level = st.sidebar.text_input("Education Level Target", value=reqs.get("education_level", "Not Specified"))
 
 # If user modifies sidebar requirements directly, click here to sync and re-trigger match
@@ -265,10 +294,10 @@ if st.sidebar.button("Sync Constraints & Re-Rank"):
         "nice_to_have_skills": [s.strip() for s in nice_have_input.split(",") if s.strip()],
         "min_experience_years": min_exp_slider,
         "education_level": education_level,
-        "other_constraints": reqs.get("other_constraints", [])
+        "other_constraints": reqs.get("other_constraints", []),
     }
     st.session_state["requirements"] = updated_reqs
-    
+
     # Run matching graph synchronously with updated constraints
     state_input = {
         "messages": st.session_state["messages"],
@@ -285,11 +314,14 @@ if st.sidebar.button("Sync Constraints & Re-Rank"):
         "llm_model": llm_model,
         "api_key": api_key,
         "api_url": api_url,
-        "errors": []
+        "errors": [],
     }
-    
+
     with st.spinner("Re-ranking candidates based on updated constraints..."):
-        result = matching_agent_workflow.invoke(state_input, config={"configurable": {"thread_id": "streamlit-session-thread"}})
+        result = matching_agent_workflow.invoke(
+            state_input,
+            config={"configurable": {"thread_id": "streamlit-session-thread"}},
+        )
         st.session_state["shortlist"] = result.get("shortlist", [])
         st.session_state["final_report"] = result.get("final_report", "")
         st.session_state["ranking_explanation"] = result.get("ranking_explanation", "")
@@ -301,8 +333,14 @@ if st.sidebar.button("Sync Constraints & Re-Rank"):
 # Main Layout Workspace
 # ----------------------------------------------------
 
-st.markdown('<h1 class="app-header">💼 Agentic Profile Matching Engine</h1>', unsafe_allow_html=True)
-st.markdown('<p class="app-subtitle">Your interactive AI assistant to search, rank, screen, and compare candidate resumes.</p>', unsafe_allow_html=True)
+st.markdown(
+    '<h1 class="app-header">💼 Agentic Profile Matching Engine</h1>',
+    unsafe_allow_html=True,
+)
+st.markdown(
+    '<p class="app-subtitle">Your interactive AI assistant to search, rank, screen, and compare candidate resumes.</p>',
+    unsafe_allow_html=True,
+)
 
 # Render active warnings/errors from the agent run
 if st.session_state["errors"]:
@@ -315,7 +353,9 @@ tab1, tab2, tab3 = st.tabs(["💬 Chat Workspace", "📊 Shortlist & Comparison"
 # TAB 1: Chat Workspace
 with tab1:
     st.markdown("### Chat with Recruiter Assistant")
-    st.caption("Paste a Job Description (JD) to extract requirements, or type conversational search and refinement commands.")
+    st.caption(
+        "Paste a Job Description (JD) to extract requirements, or type conversational search and refinement commands."
+    )
 
     # Render conversational chat log
     for msg in st.session_state["messages"]:
@@ -328,15 +368,15 @@ with tab1:
 
     # Chat input area
     user_query = st.chat_input("Enter message (e.g. 'Search resumes for React developers with 3+ years experience')")
-    
+
     if user_query:
         # Display user input in UI immediately
         with st.chat_message("user"):
             st.markdown(user_query)
-            
+
         # Append to message list
         st.session_state["messages"].append(HumanMessage(content=user_query))
-        
+
         # Prepare graph state inputs
         state_input = {
             "messages": st.session_state["messages"],
@@ -353,14 +393,17 @@ with tab1:
             "llm_model": llm_model,
             "api_key": api_key,
             "api_url": api_url,
-            "errors": []
+            "errors": [],
         }
-        
+
         # Execute workflow
         with st.spinner("Recruiter Agent is working..."):
             try:
-                result = matching_agent_workflow.invoke(state_input, config={"configurable": {"thread_id": "streamlit-session-thread"}})
-                
+                result = matching_agent_workflow.invoke(
+                    state_input,
+                    config={"configurable": {"thread_id": "streamlit-session-thread"}},
+                )
+
                 # Copy updated state outputs to session state
                 st.session_state["messages"] = result.get("messages", [])
                 st.session_state["requirements"] = result.get("requirements", {})
@@ -368,18 +411,20 @@ with tab1:
                 st.session_state["final_report"] = result.get("final_report", "")
                 st.session_state["ranking_explanation"] = result.get("ranking_explanation", "")
                 st.session_state["errors"] = result.get("errors", [])
-                
+
                 # Render assistant output
                 with st.chat_message("assistant"):
                     if st.session_state["shortlist"]:
                         st.markdown("Analyzed candidates and successfully updated active requirements.")
                         if st.session_state["ranking_explanation"]:
                             st.info(st.session_state["ranking_explanation"])
-                        st.markdown(f"**Top Candidates Shortlisted**: {', '.join(c['name'] for c in st.session_state['shortlist'][:3])}")
+                        st.markdown(
+                            f"**Top Candidates Shortlisted**: {', '.join(c['name'] for c in st.session_state['shortlist'][:3])}"
+                        )
                     else:
                         st.markdown("Ingested input. Please verify the active requirements are updated.")
                 st.rerun()
-                
+
             except Exception as e:
                 st.error(f"Error executing agentic loop: {e}")
                 st.session_state["messages"].append(AIMessage(content=f"Sorry, I encountered an error: {str(e)}"))
@@ -388,23 +433,23 @@ with tab1:
 with tab2:
     st.markdown("### Candidate Shortlist Matrix")
     shortlist = st.session_state["shortlist"]
-    
+
     if not shortlist:
         st.info("No candidates shortlisted yet. Paste a JD or write a search command in the Chat tab.")
     else:
         # Display side-by-side comparison table
         st.markdown("#### Head-to-Head Comparison Matrix")
         rec_limit = st.session_state["recommendation_limit"]
-        candidate_ids = [c["candidate_id"] for c in shortlist[:int(rec_limit)]]
+        candidate_ids = [c["candidate_id"] for c in shortlist[: int(rec_limit)]]
         compare_md = compare_candidates(candidate_ids, shortlist)
         st.markdown(compare_md)
-        
+
         st.markdown("---")
         st.markdown("#### Ranked Candidate Shortlist")
-        
+
         for idx, c in enumerate(shortlist):
-            status = c.get('screening_status', 'Shortlisted')
-            
+            status = c.get("screening_status", "Shortlisted")
+
             # Strict classification to avoid operator precedence / substring bugs (like 'no-hire' matching 'hire')
             if "reject" in status.lower() or "no-hire" in status.lower():
                 status_class = "status-rejected"
@@ -412,34 +457,34 @@ with tab2:
                 status_class = "status-borderline"
             else:
                 status_class = "status-strong"
-            
+
             # Format skills
-            skills_html = "".join(f'<span class="skill-tag">{s}</span>' for s in c.get('matched_skills', []))
+            skills_html = "".join(f'<span class="skill-tag">{s}</span>' for s in c.get("matched_skills", []))
             if not skills_html:
                 skills_html = '<span class="skill-tag" style="opacity: 0.5;">None matched</span>'
-                
+
             # Get path relative to the project root directory
             try:
                 project_root = Path(config.BASE_DIR).parent
-                rel_path = Path(c['candidate_id']).relative_to(project_root)
+                rel_path = Path(c["candidate_id"]).relative_to(project_root)
             except Exception:
-                rel_path = Path(c['candidate_id']).name
-                
+                rel_path = Path(c["candidate_id"]).name
+
             card_html = f"""
             <div class="candidate-card">
                 <div class="card-header">
                     <div>
-                        <span class="card-name">{c['name']}</span>
-                        <span style="color: #9ca3af; margin-left: 8px; font-size: 0.9rem;">(Rank #{idx+1})</span>
+                        <span class="card-name">{c["name"]}</span>
+                        <span style="color: #9ca3af; margin-left: 8px; font-size: 0.9rem;">(Rank #{idx + 1})</span>
                     </div>
-                    <span class="score-badge">{c['score']}/100</span>
+                    <span class="score-badge">{c["score"]}/100</span>
                 </div>
                 <div style="margin-bottom: 0.75rem;">
                     <span class="status-pill {status_class}">{status}</span>
                 </div>
                 <div style="display: flex; gap: 2rem; font-size: 0.9rem; margin-bottom: 0.75rem; color: #d1d5db;">
-                    <div>💼 <b>Experience</b>: {c['experience_years']} Years</div>
-                    <div>🎓 <b>Education</b>: {c['education']}</div>
+                    <div>💼 <b>Experience</b>: {c["experience_years"]} Years</div>
+                    <div>🎓 <b>Education</b>: {c["education"]}</div>
                 </div>
                 <div style="margin-bottom: 0.5rem;">
                     <span style="font-size: 0.8rem; color: #9ca3af; font-weight: 600; display: block; margin-bottom: 0.25rem;">MATCHED SKILLS:</span>
@@ -456,17 +501,19 @@ with tab2:
 with tab3:
     st.markdown("### Deep Profile Audits")
     shortlist = st.session_state["shortlist"]
-    
+
     if not shortlist:
         st.info("No candidate screening data available yet.")
     else:
         deep_limit = st.session_state["deep_limit"]
-        for idx, c in enumerate(shortlist[:int(deep_limit)]):
+        for idx, c in enumerate(shortlist[: int(deep_limit)]):
             # Expander for each shortlisted candidate
-            expander_title = f"{idx+1}. {c['name']} (Match Score: {c['score']}/100) — {c.get('screening_status', 'Shortlisted')}"
+            expander_title = (
+                f"{idx + 1}. {c['name']} (Match Score: {c['score']}/100) — {c.get('screening_status', 'Shortlisted')}"
+            )
             with st.expander(expander_title):
                 st.markdown(f"**Screening Reasoning**: {c.get('screening_reasoning', 'No deep reasoning generated.')}")
-                
+
                 cols = st.columns(2)
                 with cols[0]:
                     st.markdown("**Core Strengths**:")
@@ -480,9 +527,9 @@ with tab3:
                         st.markdown("\n".join(f"- {g}" for g in c["gaps"]))
                     else:
                         st.caption("No gaps evaluated yet.")
-                        
+
                 st.markdown(f"**Improvement Suggestions**: *{c.get('improvement_suggestions', 'None')}*")
-                
+
                 # Show interview questions
                 if c.get("interview_questions"):
                     st.markdown("#### Custom Interview Questions:")

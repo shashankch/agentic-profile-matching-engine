@@ -13,7 +13,7 @@ from agentic_profile_matching.agent.nodes import (
     recommendation_node,
     generate_report_node,
     adjust_requirements_node,
-    conversational_query_node
+    conversational_query_node,
 )
 
 # Build LangGraph Workflow
@@ -40,8 +40,8 @@ builder.add_conditional_edges(
     {
         "extract_requirements": "extract_requirements",
         "adjust_requirements": "adjust_requirements",
-        "conversational_query": "conversational_query"
-    }
+        "conversational_query": "conversational_query",
+    },
 )
 
 builder.add_edge("extract_requirements", "search_resumes")
@@ -57,22 +57,23 @@ builder.add_edge("conversational_query", END)
 memory = MemorySaver()
 matching_agent_workflow = builder.compile(checkpointer=memory)
 
+
 # Code for CLI diagram compilation execution helper
 def generate_diagrams():
     print("Compiling LangGraph Workflow and generating state machine diagram...")
     docs_dir = Path(__file__).resolve().parent.parent.parent.parent / "docs"
     docs_dir.mkdir(exist_ok=True)
-    
+
     try:
         # Save mermaid representation
         graph = matching_agent_workflow.get_graph()
         mermaid_code = graph.draw_mermaid()
-        
+
         mermaid_path = docs_dir / "state_machine.mermaid"
         with open(mermaid_path, "w") as f:
             f.write(mermaid_code)
         print(f"Mermaid state machine diagram saved to {mermaid_path}")
-        
+
         # Draw and save PNG
         png_data = graph.draw_mermaid_png()
         png_path = docs_dir / "state_machine.png"

@@ -12,8 +12,7 @@ def route_input(state: AgentState) -> str:
     last_msg = messages[-1].content.lower()
     lines = [line.strip() for line in last_msg.split("\n") if line.strip()]
     is_jd = len(lines) > 3 or any(
-        w in last_msg
-        for w in ["job description", "requirements:", "duties:", "responsibilities:"]
+        w in last_msg for w in ["job description", "requirements:", "duties:", "responsibilities:"]
     )
 
     if is_jd or not state.get("requirements"):

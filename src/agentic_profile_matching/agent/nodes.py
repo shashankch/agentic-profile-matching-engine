@@ -119,16 +119,12 @@ def extract_requirements_node(state: AgentState) -> Dict[str, Any]:
         requirements = extract_requirements(last_msg, llm)
         if not isinstance(requirements, dict):
             requirements = fallback_reqs
-            errors.append(
-                "Invalid structure returned by extract_requirements, using fallback."
-            )
+            errors.append("Invalid structure returned by extract_requirements, using fallback.")
 
         return {"requirements": requirements, "current_round": 1, "errors": errors}
     except Exception as e:
         print(f"Error in extract_requirements_node: {e}")
-        errors.append(
-            f"Requirements extraction failed: {str(e)}. Using fallback requirements."
-        )
+        errors.append(f"Requirements extraction failed: {str(e)}. Using fallback requirements.")
         return {"requirements": fallback_reqs, "current_round": 1, "errors": errors}
 
 
@@ -197,22 +193,14 @@ def rank_candidates_node(state: AgentState) -> Dict[str, Any]:
         ranked_shortlist = []
 
         for c in raw_matches:
-            candidate_skills = [
-                s.lower().strip()
-                for s in c.get("matched_skills", []) + c.get("skills", [])
-                if s
-            ]
+            candidate_skills = [s.lower().strip() for s in c.get("matched_skills", []) + c.get("skills", []) if s]
 
             # Calculate matched must-have and nice-to-have skills
             matched_must = [
-                s
-                for s in requirements.get("must_have_skills", [])
-                if s.lower().strip() in candidate_skills
+                s for s in requirements.get("must_have_skills", []) if s.lower().strip() in candidate_skills
             ]
             missing_must = [
-                s
-                for s in requirements.get("must_have_skills", [])
-                if s.lower().strip() not in candidate_skills
+                s for s in requirements.get("must_have_skills", []) if s.lower().strip() not in candidate_skills
             ]
 
             # Structure CandidateMatch profile
@@ -274,9 +262,7 @@ def deep_screen_node(state: AgentState) -> Dict[str, Any]:
     deep_limit = state.get("deep_screen_limit") or config.DEFAULT_DEEP_LIMIT
     # Screen candidates dynamically based on deep_limit
     candidates_to_screen = shortlist[: int(deep_limit)]
-    print(
-        f"Executing Round 2 (Deep Screening) on top {len(candidates_to_screen)} candidates..."
-    )
+    print(f"Executing Round 2 (Deep Screening) on top {len(candidates_to_screen)} candidates...")
 
     for idx, c in enumerate(candidates_to_screen):
         # Read full resume text from file
@@ -287,9 +273,7 @@ def deep_screen_node(state: AgentState) -> Dict[str, Any]:
             errors.append(err_msg)
             c["strengths"] = ["Strong skill overlap based on RAG indexing"]
             c["gaps"] = ["Could not audit text (file unreadable / unparsed)"]
-            c["improvement_suggestions"] = (
-                "Review resume file formatting before interviewing candidate."
-            )
+            c["improvement_suggestions"] = "Review resume file formatting before interviewing candidate."
             c["screening_status"] = "Screened"
             c["screening_reasoning"] = (
                 f"Fallback screening (unreadable file: {res.get('error') if res else 'Unknown error'})"
@@ -307,12 +291,8 @@ def deep_screen_node(state: AgentState) -> Dict[str, Any]:
 
         if llm is None:
             c["strengths"] = ["Semantic match based on vector DB indexing"]
-            c["gaps"] = [
-                "Skipped deep screening audit due to missing LLM configuration"
-            ]
-            c["improvement_suggestions"] = (
-                "Configure LLM provider with a valid API key."
-            )
+            c["gaps"] = ["Skipped deep screening audit due to missing LLM configuration"]
+            c["improvement_suggestions"] = "Configure LLM provider with a valid API key."
             c["screening_status"] = "Screened"
             c["screening_reasoning"] = "Fallback screening due to unconfigured LLM"
             continue
@@ -352,13 +332,9 @@ Candidate Resume Text:
             errors.append(err_msg)
             c["strengths"] = ["Semantic match based on vector DB indexing"]
             c["gaps"] = ["Skipped deep screening audit due to LLM error"]
-            c["improvement_suggestions"] = (
-                "Schedule interview to evaluate candidates skills directly."
-            )
+            c["improvement_suggestions"] = "Schedule interview to evaluate candidates skills directly."
             c["screening_status"] = "Screened"
-            c["screening_reasoning"] = (
-                f"Fallback screening due to LLM or parse error: {str(e)}"
-            )
+            c["screening_reasoning"] = f"Fallback screening due to LLM or parse error: {str(e)}"
 
     return {"shortlist": shortlist, "current_round": 2, "errors": errors}
 
@@ -382,17 +358,13 @@ def recommendation_node(state: AgentState) -> Dict[str, Any]:
         )
     except Exception as e:
         print(f"Error building LLM model in recommendation_node: {e}")
-        errors.append(
-            f"Failed to build LLM for interview question generation: {str(e)}"
-        )
+        errors.append(f"Failed to build LLM for interview question generation: {str(e)}")
         llm = None
 
     rec_limit = state.get("recommendation_limit") or config.DEFAULT_RECOMMENDATION_LIMIT
     # Generate questions and recommendations dynamically based on rec_limit
     candidates_to_decide = shortlist[: int(rec_limit)]
-    print(
-        f"Executing Round 3 (Hire Decision & QGen) for top {len(candidates_to_decide)} candidates..."
-    )
+    print(f"Executing Round 3 (Hire Decision & QGen) for top {len(candidates_to_decide)} candidates...")
 
     for idx, c in enumerate(candidates_to_decide):
         if idx > 0:
@@ -404,9 +376,7 @@ def recommendation_node(state: AgentState) -> Dict[str, Any]:
                 questions = generate_interview_questions(
                     candidate_name=c.get("name", "Unknown"),
                     skills=c.get("matched_skills", []) + c.get("skills", []),
-                    gaps=c.get("gaps")
-                    if c.get("gaps")
-                    else c.get("missing_skills", []),
+                    gaps=c.get("gaps") if c.get("gaps") else c.get("missing_skills", []),
                     requirements=requirements,
                     llm=llm,
                 )
@@ -414,9 +384,7 @@ def recommendation_node(state: AgentState) -> Dict[str, Any]:
             else:
                 raise ValueError("LLM not configured.")
         except Exception as e:
-            err_msg = (
-                f"Failed to generate interview questions for {c.get('name')}: {str(e)}"
-            )
+            err_msg = f"Failed to generate interview questions for {c.get('name')}: {str(e)}"
             print(err_msg)
             errors.append(err_msg)
             c["interview_questions"] = [
@@ -463,9 +431,7 @@ def generate_report_node(state: AgentState) -> Dict[str, Any]:
     if has_changes and messages:
         feedback_instructions = ""
         for msg in reversed(messages):
-            if isinstance(msg, HumanMessage) or (
-                hasattr(msg, "type") and msg.type == "human"
-            ):
+            if isinstance(msg, HumanMessage) or (hasattr(msg, "type") and msg.type == "human"):
                 feedback_instructions = msg.content
                 break
 
@@ -505,9 +471,7 @@ def generate_report_node(state: AgentState) -> Dict[str, Any]:
                 print(f"Ranking changes explanation generated:\n{ranking_explanation}")
             except Exception as e:
                 print(f"Failed to generate ranking explanation: {e}")
-                ranking_explanation = (
-                    "Candidate rankings updated based on the new constraints."
-                )
+                ranking_explanation = "Candidate rankings updated based on the new constraints."
 
     rec_limit = state.get("recommendation_limit") or config.DEFAULT_RECOMMENDATION_LIMIT
     deep_limit = state.get("deep_screen_limit") or config.DEFAULT_DEEP_LIMIT
@@ -528,9 +492,7 @@ def generate_report_node(state: AgentState) -> Dict[str, Any]:
     ]
 
     if ranking_explanation:
-        report_lines.extend(
-            ["## 🔄 Ranking Changes Explanation", "", ranking_explanation, ""]
-        )
+        report_lines.extend(["## 🔄 Ranking Changes Explanation", "", ranking_explanation, ""])
 
     report_lines.extend(
         [
@@ -543,9 +505,7 @@ def generate_report_node(state: AgentState) -> Dict[str, Any]:
         ]
     )
 
-    for idx, c in enumerate(
-        shortlist[: int(deep_limit)]
-    ):  # Deep screening up to dynamic deep_limit candidates
+    for idx, c in enumerate(shortlist[: int(deep_limit)]):  # Deep screening up to dynamic deep_limit candidates
         status = c.get("screening_status", "").lower()
         if "reject" in status or "no-hire" in status:
             status_color = "🔴"
@@ -612,9 +572,7 @@ def generate_report_node(state: AgentState) -> Dict[str, Any]:
         )
 
     if ranking_explanation:
-        summary_lines.extend(
-            ["", "**Ranking Changes Explanation**:", ranking_explanation]
-        )
+        summary_lines.extend(["", "**Ranking Changes Explanation**:", ranking_explanation])
 
     if state.get("errors"):
         summary_lines.extend(
@@ -660,16 +618,12 @@ def adjust_requirements_node(state: AgentState) -> Dict[str, Any]:
 
     print(f"Refining job requirements based on feedback: '{last_msg}'")
 
-    system_prompt = ADJUST_REQUIREMENTS_SYSTEM_PROMPT.format(
-        current_reqs_json=json.dumps(current_reqs, indent=2)
-    )
+    system_prompt = ADJUST_REQUIREMENTS_SYSTEM_PROMPT.format(current_reqs_json=json.dumps(current_reqs, indent=2))
 
     def _call_adjust():
         messages_prompt = [
             SystemMessage(content=system_prompt),
-            HumanMessage(
-                content=f"Update the requirements using this instruction: '{last_msg}'"
-            ),
+            HumanMessage(content=f"Update the requirements using this instruction: '{last_msg}'"),
         ]
         response = llm.invoke(messages_prompt)
         content = response.content.strip()
@@ -707,9 +661,7 @@ def fetch_candidate_notes_tool(candidate_name: str) -> str:
     """
     Retrieve mock HR coordinator screening notes for a specific candidate name.
     """
-    res = mcp_client.call_tool(
-        "search", "fetch_candidate_notes", {"candidate_name": candidate_name}
-    )
+    res = mcp_client.call_tool("search", "fetch_candidate_notes", {"candidate_name": candidate_name})
     if isinstance(res, dict) and "notes" in res:
         return res["notes"]
     return str(res)
@@ -785,15 +737,11 @@ def conversational_query_node(state: AgentState) -> Dict[str, Any]:
 
                 from langchain_core.messages import ToolMessage
 
-                local_messages.append(
-                    ToolMessage(content=str(result), tool_call_id=tool_call["id"])
-                )
+                local_messages.append(ToolMessage(content=str(result), tool_call_id=tool_call["id"]))
 
         ai_msg = AIMessage(content=local_messages[-1].content)
         return {"messages": messages + [ai_msg]}
     except Exception as e:
         print(f"Failed to execute conversational query: {e}")
-        err_msg = AIMessage(
-            content=f"I encountered an error trying to analyze that: {str(e)}"
-        )
+        err_msg = AIMessage(content=f"I encountered an error trying to analyze that: {str(e)}")
         return {"messages": messages + [err_msg]}

@@ -82,6 +82,4 @@ def generate_diagrams():
         print(f"PNG state machine diagram saved to {png_path}")
     except Exception as e:
         print(f"Note: Could not generate visual PNG diagram. Error: {e}")
-        print(
-            "Mermaid representation is still saved, which can be rendered in markdown."
-        )
+        print("Mermaid representation is still saved, which can be rendered in markdown.")

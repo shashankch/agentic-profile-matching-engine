@@ -61,9 +61,7 @@ def test_job_matcher_match(mock_chroma_client, mock_sentence_transformer):
         apply_filters=True,
     )
 
-    assert (
-        len(res["top_matches"]) == 1
-    )  # Bob has 2 years exp and no Python, so filtered out
+    assert len(res["top_matches"]) == 1  # Bob has 2 years exp and no Python, so filtered out
     match = res["top_matches"][0]
     assert match["candidate_name"] == "Alice Smith"
     assert match["match_score"] > 50

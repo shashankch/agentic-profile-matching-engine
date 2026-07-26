@@ -8,9 +8,7 @@ from mcp.server.fastmcp import FastMCP
 import warnings
 
 # Suppress duckduckgo_search library renaming runtime warnings
-warnings.filterwarnings(
-    "ignore", category=RuntimeWarning, message=".*duckduckgo_search.*"
-)
+warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*duckduckgo_search.*")
 
 # Add parent directory to sys.path to allow running as script directly
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -164,8 +162,7 @@ def search_chroma_db(query: str, limit: int = 5) -> Dict:
                         "candidate_name": metas[idx].get("candidate_name", "Unknown"),
                         "section": metas[idx].get("section", "GENERAL"),
                         "score": sim_score,
-                        "excerpt": docs[idx][:300]
-                        + ("..." if len(docs[idx]) > 300 else ""),
+                        "excerpt": docs[idx][:300] + ("..." if len(docs[idx]) > 300 else ""),
                         "resume_path": metas[idx].get("resume_path", ""),
                     }
                 )

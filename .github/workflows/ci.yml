@@ -41,9 +41,10 @@ jobs:
         pip install -e .
         pip install pytest pytest-mock ruff
 
-    - name: Run Ruff Linter
+    - name: Run Ruff Linter & Format Check
       run: |
-        ruff check src/
+        ruff check .
+        ruff format --check .
 
     - name: Run tests
       run: |

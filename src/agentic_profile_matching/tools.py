@@ -19,14 +19,8 @@ def execute_with_retry(func, *args, **kwargs):
             return func(*args, **kwargs)
         except Exception as e:
             err_msg = str(e)
-            if (
-                "429" in err_msg
-                or "rate_limit" in err_msg.lower()
-                or "too many requests" in err_msg.lower()
-            ):
-                print(
-                    f"Rate limit hit (429). Retrying in {delay:.1f} seconds (Attempt {attempt + 1}/{max_retries})..."
-                )
+            if "429" in err_msg or "rate_limit" in err_msg.lower() or "too many requests" in err_msg.lower():
+                print(f"Rate limit hit (429). Retrying in {delay:.1f} seconds (Attempt {attempt + 1}/{max_retries})...")
                 time.sleep(delay)
                 delay *= 2.0
             else:
@@ -54,9 +48,7 @@ The JSON structure must match this exact format:
     def _call():
         messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(
-                content=f"Extract requirements for this Job Description:\n\n{jd}"
-            ),
+            HumanMessage(content=f"Extract requirements for this Job Description:\n\n{jd}"),
         ]
         response = llm.invoke(messages)
         content = response.content.strip()
@@ -98,11 +90,7 @@ def compare_candidates(candidate_ids: List[str], shortlist: List[Dict]) -> str:
         # Match by filename stem, candidate_id, or full name
         matched = None
         for c in shortlist:
-            if (
-                c["candidate_id"] == c_id
-                or c["name"] == c_id
-                or Path(c["candidate_id"]).stem == c_id
-            ):
+            if c["candidate_id"] == c_id or c["name"] == c_id or Path(c["candidate_id"]).stem == c_id:
                 matched = c
                 break
         if matched and matched not in candidates:
@@ -116,11 +104,7 @@ def compare_candidates(candidate_ids: List[str], shortlist: List[Dict]) -> str:
         return "No matching candidates found in the shortlist to compare."
 
     # Build Markdown table
-    header_row = (
-        "| Match Category | "
-        + " | ".join(f"**{c['name']}**" for c in candidates)
-        + " |"
-    )
+    header_row = "| Match Category | " + " | ".join(f"**{c['name']}**" for c in candidates) + " |"
     separator_row = "|---| " + " | ".join("---" for _ in candidates) + " |"
 
     rows = [
@@ -129,19 +113,11 @@ def compare_candidates(candidate_ids: List[str], shortlist: List[Dict]) -> str:
         ("Education", lambda c: f"{c.get('education', 'Not Specified')}"),
         (
             "Matched Skills",
-            lambda c: (
-                ", ".join(c.get("matched_skills", []))
-                if c.get("matched_skills")
-                else "None"
-            ),
+            lambda c: ", ".join(c.get("matched_skills", [])) if c.get("matched_skills") else "None",
         ),
         (
             "Missing Core Skills",
-            lambda c: (
-                ", ".join(c.get("missing_skills", []))
-                if c.get("missing_skills")
-                else "None"
-            ),
+            lambda c: ", ".join(c.get("missing_skills", [])) if c.get("missing_skills") else "None",
         ),
         (
             "Decision Status",
@@ -158,11 +134,7 @@ def compare_candidates(candidate_ids: List[str], shortlist: List[Dict]) -> str:
         ),
         (
             "Core Strengths",
-            lambda c: (
-                "; ".join(c.get("strengths", []))
-                if c.get("strengths")
-                else "Not Specified"
-            ),
+            lambda c: "; ".join(c.get("strengths", [])) if c.get("strengths") else "Not Specified",
         ),
         (
             "Identified Gaps",
@@ -172,9 +144,7 @@ def compare_candidates(candidate_ids: List[str], shortlist: List[Dict]) -> str:
 
     table_lines = [header_row, separator_row]
     for label, extractor_fn in rows:
-        line = (
-            f"| **{label}** | " + " | ".join(extractor_fn(c) for c in candidates) + " |"
-        )
+        line = f"| **{label}** | " + " | ".join(extractor_fn(c) for c in candidates) + " |"
         table_lines.append(line)
 
     return "\n".join(table_lines)

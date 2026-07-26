@@ -218,9 +218,7 @@ if "errors" not in st.session_state:
 st.sidebar.title("Configuration & Filters")
 
 st.sidebar.markdown("### 1. LLM Provider Setup")
-llm_provider = st.sidebar.selectbox(
-    "LLM Provider", list(config.SUPPORTED_PROVIDERS.keys()), index=0
-)
+llm_provider = st.sidebar.selectbox("LLM Provider", list(config.SUPPORTED_PROVIDERS.keys()), index=0)
 supported_models = config.SUPPORTED_PROVIDERS[llm_provider]
 llm_model = st.sidebar.selectbox("Model Name", supported_models, index=0)
 
@@ -237,9 +235,7 @@ api_key = st.sidebar.text_input("API Key", value=default_key, type="password")
 
 api_url = None
 if llm_provider == "Custom (OpenAI-compatible)":
-    api_url = st.sidebar.text_input(
-        "API Base URL (Endpoint)", value="https://api.openai.com/v1"
-    )
+    api_url = st.sidebar.text_input("API Base URL (Endpoint)", value="https://api.openai.com/v1")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 2. Throttling & Limits Control")
@@ -273,9 +269,7 @@ st.sidebar.markdown("### 3. Active Requirements Constraints")
 # Show current requirement constraints in UI controls to support direct modification
 reqs = st.session_state["requirements"]
 
-title_input = st.sidebar.text_input(
-    "Extracted Job Title", value=reqs.get("title", "Software Engineer")
-)
+title_input = st.sidebar.text_input("Extracted Job Title", value=reqs.get("title", "Software Engineer"))
 min_exp_slider = st.sidebar.slider(
     "Min Experience Years",
     min_value=0,
@@ -290,20 +284,14 @@ nice_have_input = st.sidebar.text_area(
     "Nice-To-Have Skills (comma separated)",
     value=", ".join(reqs.get("nice_to_have_skills", [])),
 )
-education_level = st.sidebar.text_input(
-    "Education Level Target", value=reqs.get("education_level", "Not Specified")
-)
+education_level = st.sidebar.text_input("Education Level Target", value=reqs.get("education_level", "Not Specified"))
 
 # If user modifies sidebar requirements directly, click here to sync and re-trigger match
 if st.sidebar.button("Sync Constraints & Re-Rank"):
     updated_reqs = {
         "title": title_input,
-        "must_have_skills": [
-            s.strip() for s in must_have_input.split(",") if s.strip()
-        ],
-        "nice_to_have_skills": [
-            s.strip() for s in nice_have_input.split(",") if s.strip()
-        ],
+        "must_have_skills": [s.strip() for s in must_have_input.split(",") if s.strip()],
+        "nice_to_have_skills": [s.strip() for s in nice_have_input.split(",") if s.strip()],
         "min_experience_years": min_exp_slider,
         "education_level": education_level,
         "other_constraints": reqs.get("other_constraints", []),
@@ -360,9 +348,7 @@ if st.session_state["errors"]:
         st.warning(f"⚠️ {err}")
 
 
-tab1, tab2, tab3 = st.tabs(
-    ["💬 Chat Workspace", "📊 Shortlist & Comparison", "🔎 Deep Screening Reports"]
-)
+tab1, tab2, tab3 = st.tabs(["💬 Chat Workspace", "📊 Shortlist & Comparison", "🔎 Deep Screening Reports"])
 
 # TAB 1: Chat Workspace
 with tab1:
@@ -373,9 +359,7 @@ with tab1:
 
     # Render conversational chat log
     for msg in st.session_state["messages"]:
-        if isinstance(msg, HumanMessage) or (
-            hasattr(msg, "type") and msg.type == "human"
-        ):
+        if isinstance(msg, HumanMessage) or (hasattr(msg, "type") and msg.type == "human"):
             with st.chat_message("user"):
                 st.markdown(msg.content)
         elif isinstance(msg, AIMessage) or (hasattr(msg, "type") and msg.type == "ai"):
@@ -383,9 +367,7 @@ with tab1:
                 st.markdown(msg.content)
 
     # Chat input area
-    user_query = st.chat_input(
-        "Enter message (e.g. 'Search resumes for React developers with 3+ years experience')"
-    )
+    user_query = st.chat_input("Enter message (e.g. 'Search resumes for React developers with 3+ years experience')")
 
     if user_query:
         # Display user input in UI immediately
@@ -427,33 +409,25 @@ with tab1:
                 st.session_state["requirements"] = result.get("requirements", {})
                 st.session_state["shortlist"] = result.get("shortlist", [])
                 st.session_state["final_report"] = result.get("final_report", "")
-                st.session_state["ranking_explanation"] = result.get(
-                    "ranking_explanation", ""
-                )
+                st.session_state["ranking_explanation"] = result.get("ranking_explanation", "")
                 st.session_state["errors"] = result.get("errors", [])
 
                 # Render assistant output
                 with st.chat_message("assistant"):
                     if st.session_state["shortlist"]:
-                        st.markdown(
-                            "Analyzed candidates and successfully updated active requirements."
-                        )
+                        st.markdown("Analyzed candidates and successfully updated active requirements.")
                         if st.session_state["ranking_explanation"]:
                             st.info(st.session_state["ranking_explanation"])
                         st.markdown(
                             f"**Top Candidates Shortlisted**: {', '.join(c['name'] for c in st.session_state['shortlist'][:3])}"
                         )
                     else:
-                        st.markdown(
-                            "Ingested input. Please verify the active requirements are updated."
-                        )
+                        st.markdown("Ingested input. Please verify the active requirements are updated.")
                 st.rerun()
 
             except Exception as e:
                 st.error(f"Error executing agentic loop: {e}")
-                st.session_state["messages"].append(
-                    AIMessage(content=f"Sorry, I encountered an error: {str(e)}")
-                )
+                st.session_state["messages"].append(AIMessage(content=f"Sorry, I encountered an error: {str(e)}"))
 
 # TAB 2: Shortlist & Comparison Matrix
 with tab2:
@@ -461,9 +435,7 @@ with tab2:
     shortlist = st.session_state["shortlist"]
 
     if not shortlist:
-        st.info(
-            "No candidates shortlisted yet. Paste a JD or write a search command in the Chat tab."
-        )
+        st.info("No candidates shortlisted yet. Paste a JD or write a search command in the Chat tab.")
     else:
         # Display side-by-side comparison table
         st.markdown("#### Head-to-Head Comparison Matrix")
@@ -487,14 +459,9 @@ with tab2:
                 status_class = "status-strong"
 
             # Format skills
-            skills_html = "".join(
-                f'<span class="skill-tag">{s}</span>'
-                for s in c.get("matched_skills", [])
-            )
+            skills_html = "".join(f'<span class="skill-tag">{s}</span>' for s in c.get("matched_skills", []))
             if not skills_html:
-                skills_html = (
-                    '<span class="skill-tag" style="opacity: 0.5;">None matched</span>'
-                )
+                skills_html = '<span class="skill-tag" style="opacity: 0.5;">None matched</span>'
 
             # Get path relative to the project root directory
             try:
@@ -541,11 +508,11 @@ with tab3:
         deep_limit = st.session_state["deep_limit"]
         for idx, c in enumerate(shortlist[: int(deep_limit)]):
             # Expander for each shortlisted candidate
-            expander_title = f"{idx + 1}. {c['name']} (Match Score: {c['score']}/100) — {c.get('screening_status', 'Shortlisted')}"
+            expander_title = (
+                f"{idx + 1}. {c['name']} (Match Score: {c['score']}/100) — {c.get('screening_status', 'Shortlisted')}"
+            )
             with st.expander(expander_title):
-                st.markdown(
-                    f"**Screening Reasoning**: {c.get('screening_reasoning', 'No deep reasoning generated.')}"
-                )
+                st.markdown(f"**Screening Reasoning**: {c.get('screening_reasoning', 'No deep reasoning generated.')}")
 
                 cols = st.columns(2)
                 with cols[0]:
@@ -561,9 +528,7 @@ with tab3:
                     else:
                         st.caption("No gaps evaluated yet.")
 
-                st.markdown(
-                    f"**Improvement Suggestions**: *{c.get('improvement_suggestions', 'None')}*"
-                )
+                st.markdown(f"**Improvement Suggestions**: *{c.get('improvement_suggestions', 'None')}*")
 
                 # Show interview questions
                 if c.get("interview_questions"):

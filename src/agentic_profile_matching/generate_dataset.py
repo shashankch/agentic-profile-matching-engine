@@ -585,9 +585,7 @@ def main():
     print(f"Generating {len(RESUMES)} resumes in {resumes_dir}...")
     for c in RESUMES:
         # Prepend experience to summary
-        c["summary"] = (
-            f"{c['role']} with {c['exp']}+ years of experience. {c['summary']}"
-        )
+        c["summary"] = f"{c['role']} with {c['exp']}+ years of experience. {c['summary']}"
 
         filepath = resumes_dir / c["filename"]
         ext = filepath.suffix.lower()

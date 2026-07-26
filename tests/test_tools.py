@@ -32,9 +32,7 @@ def test_execute_with_retry_rate_limit():
         assert res == "success"
         assert call_count == 2
         # verify sleep was called to wait/throttle
-        assert (
-            mock_sleep.call_count >= 2
-        )  # 0.5 throttle sleep + rate limit backoff sleep
+        assert mock_sleep.call_count >= 2  # 0.5 throttle sleep + rate limit backoff sleep
 
 
 def test_execute_with_retry_non_retryable_error():
@@ -120,9 +118,7 @@ def test_compare_candidates():
 def test_generate_interview_questions_success():
     mock_llm = MagicMock()
     mock_response = MagicMock()
-    mock_response.content = (
-        '["What is your experience with Docker?", "Explain python decorators."]'
-    )
+    mock_response.content = '["What is your experience with Docker?", "Explain python decorators."]'
     mock_llm.invoke.return_value = mock_response
 
     res = generate_interview_questions(
@@ -148,6 +144,4 @@ def test_generate_interview_questions_fallback():
     )
 
     assert len(res) == 3  # fallback questions
-    assert any("Docker" in q or "Docker" in res[0] for q in res) or any(
-        "software engineering" in q for q in res
-    )
+    assert any("Docker" in q or "Docker" in res[0] for q in res) or any("software engineering" in q for q in res)

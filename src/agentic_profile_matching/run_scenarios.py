@@ -46,26 +46,16 @@ def run_scenarios():
     }
 
     # Run Scenario 1, 2, 3, 4: Initial JD parsing and full cascading screening
-    print(
-        "\n--- SCENARIOS 1-4: Raw JD Ingestion & Cascading Screening (Rounds 1, 2 & 3) ---"
-    )
-    result = matching_agent_workflow.invoke(
-        state, config={"configurable": {"thread_id": "scenario-test-thread"}}
-    )
+    print("\n--- SCENARIOS 1-4: Raw JD Ingestion & Cascading Screening (Rounds 1, 2 & 3) ---")
+    result = matching_agent_workflow.invoke(state, config={"configurable": {"thread_id": "scenario-test-thread"}})
 
     print("\n[Scenario 1] Extracted Job Requirements:")
     print(json_format(result["requirements"]))
 
-    print(
-        f"\n[Scenarios 2-4] Top Shortlisted Candidates (Total: {len(result['shortlist'])}):"
-    )
+    print(f"\n[Scenarios 2-4] Top Shortlisted Candidates (Total: {len(result['shortlist'])}):")
     for idx, c in enumerate(result["shortlist"][:5]):  # Print top 5
-        print(
-            f"  {idx + 1}. {c['name']} (Score: {c['score']}/100) - Status: {c.get('screening_status')}"
-        )
-        print(
-            f"     Experience: {c['experience_years']} yrs | Education: {c['education']}"
-        )
+        print(f"  {idx + 1}. {c['name']} (Score: {c['score']}/100) - Status: {c.get('screening_status')}")
+        print(f"     Experience: {c['experience_years']} yrs | Education: {c['education']}")
         if c.get("strengths"):
             print(f"     Strengths: {c['strengths']}")
             print(f"     Gaps: {c['gaps']}")
@@ -107,13 +97,9 @@ def run_scenarios():
     print("\n[Scenario 5] Ranking Changes Explanation:")
     print(result_ref.get("ranking_explanation", "No explanation generated."))
 
-    print(
-        f"\n[Scenario 5] Candidates Shortlisted after Refinement (Total: {len(result_ref['shortlist'])}):"
-    )
+    print(f"\n[Scenario 5] Candidates Shortlisted after Refinement (Total: {len(result_ref['shortlist'])}):")
     for idx, c in enumerate(result_ref["shortlist"][:5]):  # Print top 5
-        print(
-            f"  {idx + 1}. {c['name']} (Score: {c['score']}/100) - Status: {c.get('screening_status')}"
-        )
+        print(f"  {idx + 1}. {c['name']} (Score: {c['score']}/100) - Status: {c.get('screening_status')}")
         print(f"     Matched Skills: {c.get('matched_skills')}")
         print(f"     Missing Skills: {c.get('missing_skills')}")
 

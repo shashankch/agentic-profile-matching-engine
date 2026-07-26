@@ -14,9 +14,7 @@ logger.setLevel(logging.INFO)
 
 # Ensure logs go to stderr to prevent stdout contamination if any prints occur
 handler = logging.StreamHandler(sys.stderr)
-handler.setFormatter(
-    logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-)
+handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
 logger.addHandler(handler)
 
 
@@ -50,12 +48,8 @@ class MCPClientManager:
         # Use python executable from the active virtualenv if running in a virtualenv
         python_exe = sys.executable or "python"
 
-        self.servers_config["filesystem"] = StdioServerParameters(
-            command=python_exe, args=[str(fs_server_path)]
-        )
-        self.servers_config["search"] = StdioServerParameters(
-            command=python_exe, args=[str(search_server_path)]
-        )
+        self.servers_config["filesystem"] = StdioServerParameters(command=python_exe, args=[str(fs_server_path)])
+        self.servers_config["search"] = StdioServerParameters(command=python_exe, args=[str(search_server_path)])
 
         self._initialized = True
 
@@ -121,9 +115,7 @@ class MCPClientManager:
             logger.error(f"Error connecting to server '{name}': {e}")
             raise e
 
-    def call_tool(
-        self, server_name: str, tool_name: str, arguments: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def call_tool(self, server_name: str, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
         Synchronously call a tool on a specific MCP server.
 
@@ -140,9 +132,7 @@ class MCPClientManager:
         session = self.sessions[server_name]
 
         # Execute the async coroutine thread-safely in our background loop
-        future = asyncio.run_coroutine_threadsafe(
-            session.call_tool(tool_name, arguments), self.loop
-        )
+        future = asyncio.run_coroutine_threadsafe(session.call_tool(tool_name, arguments), self.loop)
         try:
             # Wait for execution to finish
             mcp_result = future.result(timeout=config.MCP_TIMEOUT)
@@ -210,9 +200,7 @@ class MCPClientManager:
             if not self.loop:
                 return
 
-            logger.info(
-                "Cleaning up MCP sessions and shutting down background processes..."
-            )
+            logger.info("Cleaning up MCP sessions and shutting down background processes...")
 
             async def _close_all():
                 for name, session in list(self.sessions.items()):

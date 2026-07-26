@@ -23,9 +23,7 @@ class TestMCPIntegration(unittest.TestCase):
         self.test_dir = Path(config.DATA_DIR) / "test_mcp_sandbox"
         self.test_dir.mkdir(exist_ok=True, parents=True)
         self.test_file = self.test_dir / "mcp_dummy.txt"
-        self.test_file.write_text(
-            "Hello from MCP test framework. Python programming is awesome."
-        )
+        self.test_file.write_text("Hello from MCP test framework. Python programming is awesome.")
 
     def tearDown(self):
         # Restore configuration
@@ -60,9 +58,7 @@ class TestMCPIntegration(unittest.TestCase):
         self.assertEqual(result["metadata"]["filename"], "mcp_dummy.txt")
 
         # Expose search_in_file
-        search_res = fs_client.search_in_file(
-            filepath=str(self.test_file.resolve()), keyword="Python", context_size=10
-        )
+        search_res = fs_client.search_in_file(filepath=str(self.test_file.resolve()), keyword="Python", context_size=10)
         self.assertTrue(search_res["success"])
         self.assertEqual(search_res["keyword"], "Python")
         self.assertGreaterEqual(search_res["total_matches"], 1)
@@ -96,25 +92,19 @@ class TestMCPIntegration(unittest.TestCase):
         config.USE_MCP = True
 
         # Test mock search server web search tool
-        search_res = mcp_client.call_tool(
-            "search", "search_web", {"query": "John Doe Github"}
-        )
+        search_res = mcp_client.call_tool("search", "search_web", {"query": "John Doe Github"})
         self.assertTrue(search_res["success"])
         self.assertEqual(search_res["query"], "John Doe Github")
         self.assertGreater(len(search_res["results"]), 0)
 
         # Test HR candidate notes tool
-        notes_res = mcp_client.call_tool(
-            "search", "fetch_candidate_notes", {"candidate_name": "Jane Smith"}
-        )
+        notes_res = mcp_client.call_tool("search", "fetch_candidate_notes", {"candidate_name": "Jane Smith"})
         self.assertTrue(notes_res["success"])
         self.assertIn("Jane Smith", notes_res["candidate_name"])
         self.assertIn("Frontend", notes_res["notes"])
 
         # Test ChromaDB search tool
-        db_res = mcp_client.call_tool(
-            "search", "search_chroma_db", {"query": "Python", "limit": 2}
-        )
+        db_res = mcp_client.call_tool("search", "search_chroma_db", {"query": "Python", "limit": 2})
         self.assertIn("success", db_res)
 
     def test_agent_error_fallback(self):
@@ -123,9 +113,7 @@ class TestMCPIntegration(unittest.TestCase):
         from langchain_core.messages import HumanMessage
 
         state = AgentState(
-            messages=[
-                HumanMessage(content="Analyze this job: Python Developer needed.")
-            ],
+            messages=[HumanMessage(content="Analyze this job: Python Developer needed.")],
             requirements={},
             shortlist=[],
             coarse_screen_limit=5,
@@ -144,9 +132,7 @@ class TestMCPIntegration(unittest.TestCase):
         # Verify it handled exception, didn't crash, added error, and used fallback requirements
         self.assertIn("errors", result)
         self.assertGreater(len(result["errors"]), 0)
-        self.assertTrue(
-            any("Requirements extraction failed" in err for err in result["errors"])
-        )
+        self.assertTrue(any("Requirements extraction failed" in err for err in result["errors"]))
         self.assertEqual(result["requirements"]["title"], "Software Engineer")
 
 

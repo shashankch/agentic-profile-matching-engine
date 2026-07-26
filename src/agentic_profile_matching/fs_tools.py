@@ -49,9 +49,7 @@ def read_file(filepath: str) -> Dict:
                 "filepath": str(path.resolve()),
                 "extension": extension,
                 "size_bytes": path.stat().st_size,
-                "modified_time": datetime.fromtimestamp(
-                    path.stat().st_mtime
-                ).isoformat(),
+                "modified_time": datetime.fromtimestamp(path.stat().st_mtime).isoformat(),
             },
         }
 
@@ -86,9 +84,7 @@ def list_files(directory: str, extension: Optional[str] = None) -> List[Dict]:
                     "name": file.name,
                     "path": str(file.resolve()),
                     "size_bytes": file.stat().st_size,
-                    "modified_time": datetime.fromtimestamp(
-                        file.stat().st_mtime
-                    ).isoformat(),
+                    "modified_time": datetime.fromtimestamp(file.stat().st_mtime).isoformat(),
                 }
             )
 
@@ -155,9 +151,7 @@ def search_in_file(
         context_start = max(0, idx - context_size)
         context_end = min(len(content), idx + len(keyword) + context_size)
 
-        all_matches.append(
-            {"position": idx, "context": content[context_start:context_end]}
-        )
+        all_matches.append({"position": idx, "context": content[context_start:context_end]})
 
         start = idx + len(keyword)
 

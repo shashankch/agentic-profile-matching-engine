@@ -146,10 +146,7 @@ def _directory_watcher_worker(directory: str, poll_interval: float = 2.0):
     while True:
         with _watcher_lock:
             # Check if this watcher has been cancelled/stopped
-            if (
-                directory not in _active_watchers
-                or not _active_watchers[directory]["active"]
-            ):
+            if directory not in _active_watchers or not _active_watchers[directory]["active"]:
                 logger.info(f"Directory watcher stopped for {directory}")
                 break
 
@@ -179,17 +176,13 @@ def _directory_watcher_worker(directory: str, poll_interval: float = 2.0):
                     try:
                         if ingestion_service is None:
                             ingestion_service = IngestionService()
-                        logger.info(
-                            f"[Watchdog] Triggering auto-ingestion for {f.name}"
-                        )
+                        logger.info(f"[Watchdog] Triggering auto-ingestion for {f.name}")
                         result = ingestion_service.ingest_file(f_abs)
                         logger.info(
                             f"[Watchdog] Auto-ingestion completed for {f.name}: success={result.get('success')}"
                         )
                     except Exception as ex:
-                        logger.error(
-                            f"[Watchdog] RAG auto-ingestion failed for {f.name}: {ex}"
-                        )
+                        logger.error(f"[Watchdog] RAG auto-ingestion failed for {f.name}: {ex}")
 
         except Exception as e:
             logger.error(f"Error in directory watcher polling loop: {e}")
@@ -224,9 +217,7 @@ def watch_directory(directory: str) -> Dict:
 
         # Start background watcher thread
         _active_watchers[abs_dir] = {"active": True}
-        thread = threading.Thread(
-            target=_directory_watcher_worker, args=(abs_dir,), daemon=True
-        )
+        thread = threading.Thread(target=_directory_watcher_worker, args=(abs_dir,), daemon=True)
         thread.start()
 
     return {

@@ -18,11 +18,7 @@ class TestIngestionService(unittest.TestCase):
         # Create dummy candidate files
         self.valid_file = self.test_dir_path / "resume_jane_doe.txt"
         self.valid_file.write_text(
-            "Jane Doe\n"
-            "EXPERIENCE\n"
-            "5 years of experience in Python, AWS, Docker.\n"
-            "EDUCATION\n"
-            "B.S. Computer Science\n"
+            "Jane Doe\nEXPERIENCE\n5 years of experience in Python, AWS, Docker.\nEDUCATION\nB.S. Computer Science\n"
         )
 
         self.empty_file = self.test_dir_path / "empty.txt"

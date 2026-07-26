@@ -11,9 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 VECTOR_DB_PATH = os.getenv("VECTOR_DB_PATH", str(BASE_DIR / "chroma_db"))
 DATA_DIR = Path(os.getenv("DATA_DIR", str(BASE_DIR / "data")))
 RESUMES_DIR = os.getenv("RESUMES_DIR", str(DATA_DIR / "resumes"))
-JOB_DESCRIPTIONS_DIR = os.getenv(
-    "JOB_DESCRIPTIONS_DIR", str(DATA_DIR / "job_descriptions")
-)
+JOB_DESCRIPTIONS_DIR = os.getenv("JOB_DESCRIPTIONS_DIR", str(DATA_DIR / "job_descriptions"))
 
 # Embedding Config
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
@@ -35,9 +33,7 @@ SUPPORTED_PROVIDERS = {
 
 DEFAULT_PROVIDER = os.getenv("DEFAULT_PROVIDER", "Groq")
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "openai/gpt-oss-120b")
-THROTTLE_DELAY = float(
-    os.getenv("THROTTLE_DELAY", "1.5")
-)  # Delay in seconds to prevent hitting LLM rate limits
+THROTTLE_DELAY = float(os.getenv("THROTTLE_DELAY", "1.5"))  # Delay in seconds to prevent hitting LLM rate limits
 
 # Default Candidate Processing Limits
 DEFAULT_COARSE_LIMIT = int(os.getenv("DEFAULT_COARSE_LIMIT", "10"))
@@ -57,9 +53,7 @@ SEARCH_SERVER_PATH = os.getenv(
 MCP_TIMEOUT = float(os.getenv("MCP_TIMEOUT", "30.0"))
 
 
-def get_llm_model(
-    provider: str, model_name: str, api_key: str, api_url: Optional[str] = None
-):
+def get_llm_model(provider: str, model_name: str, api_key: str, api_url: Optional[str] = None):
     if provider == "Groq":
         from langchain_groq import ChatGroq
 

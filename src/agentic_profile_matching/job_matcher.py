@@ -9,18 +9,14 @@ from agentic_profile_matching import config
 
 
 class JobMatcher:
-    def __init__(
-        self, model_name: Optional[str] = None, collection_name: str = "resumes"
-    ):
+    def __init__(self, model_name: Optional[str] = None, collection_name: str = "resumes"):
         self.model_name = model_name or config.EMBEDDING_MODEL
         self.embedder = SentenceTransformer(self.model_name)
         self.client = chromadb.PersistentClient(path=config.VECTOR_DB_PATH)
         try:
             self.collection = self.client.get_collection(collection_name)
         except Exception:
-            print(
-                f"Collection '{collection_name}' not found. Creating it to avoid crash."
-            )
+            print(f"Collection '{collection_name}' not found. Creating it to avoid crash.")
             self.collection = self.client.get_or_create_collection(collection_name)
 
     def match(
@@ -67,9 +63,7 @@ class JobMatcher:
 
         # 1. Semantic Search using ChromaDB
         query_emb = self.embedder.encode(job_description).tolist()
-        results = self.collection.query(
-            query_embeddings=[query_emb], n_results=len(ids)
-        )
+        results = self.collection.query(query_embeddings=[query_emb], n_results=len(ids))
 
         semantic_scores_dict = {}
         if results and "ids" in results and len(results["ids"]) > 0:
@@ -88,16 +82,12 @@ class JobMatcher:
 
         # Normalize BM25 scores
         max_bm25 = max(bm25_scores) if len(bm25_scores) > 0 else 0
-        normalized_bm25_scores = [
-            s / max_bm25 if max_bm25 > 0 else 0.0 for s in bm25_scores
-        ]
+        normalized_bm25_scores = [s / max_bm25 if max_bm25 > 0 else 0.0 for s in bm25_scores]
 
         # 3. Hybrid Retrieval & Filtering
         candidate_matches = {}
 
-        for chunk_idx, (doc_id, doc_text, meta) in enumerate(
-            zip(ids, documents, metadatas)
-        ):
+        for chunk_idx, (doc_id, doc_text, meta) in enumerate(zip(ids, documents, metadatas)):
             candidate_exp = int(meta.get("experience_years", 0))
             if apply_filters:
                 # Filter by experience
@@ -106,16 +96,10 @@ class JobMatcher:
 
                 # Filter by must-have skills
                 candidate_skills_str = meta.get("skills", "")
-                candidate_skills = [
-                    s.strip().lower()
-                    for s in candidate_skills_str.split(",")
-                    if s.strip()
-                ]
+                candidate_skills = [s.strip().lower() for s in candidate_skills_str.split(",") if s.strip()]
 
                 if must_have_skills:
-                    meets_skills = all(
-                        s.lower() in candidate_skills for s in must_have_skills
-                    )
+                    meets_skills = all(s.lower() in candidate_skills for s in must_have_skills)
                     if not meets_skills:
                         continue
 
@@ -133,11 +117,7 @@ class JobMatcher:
                     "resume_path": resume_path,
                     "max_score": score_100,
                     "chunks": [],
-                    "skills": [
-                        s.strip()
-                        for s in meta.get("skills", "").split(",")
-                        if s.strip()
-                    ],
+                    "skills": [s.strip() for s in meta.get("skills", "").split(",") if s.strip()],
                     "experience_years": candidate_exp,
                     "education": meta.get("education", "Not Specified"),
                 }
@@ -160,9 +140,7 @@ class JobMatcher:
             info["chunks"].sort(key=lambda x: x["score"], reverse=True)
 
             # Find which sections matched best
-            matched_sections = list(
-                set(ch["section"] for ch in info["chunks"] if ch["score"] >= 65)
-            )
+            matched_sections = list(set(ch["section"] for ch in info["chunks"] if ch["score"] >= 65))
             if not matched_sections:
                 matched_sections = [info["chunks"][0]["section"]]
 
@@ -172,8 +150,7 @@ class JobMatcher:
 
             # Relevant excerpts from the highest scoring chunks
             relevant_excerpts = [
-                ch["content"][:300] + ("..." if len(ch["content"]) > 300 else "")
-                for ch in info["chunks"][:2]
+                ch["content"][:300] + ("..." if len(ch["content"]) > 300 else "") for ch in info["chunks"][:2]
             ]
 
             # Custom, readable match reasoning
@@ -182,10 +159,7 @@ class JobMatcher:
                 f"Highest matching content was found in sections: {', '.join(matched_sections)}."
             )
             if matched_skills:
-                reasoning = (
-                    f"Strong skill overlap for {', '.join(matched_skills)}. "
-                    + reasoning
-                )
+                reasoning = f"Strong skill overlap for {', '.join(matched_skills)}. " + reasoning
 
             top_matches.append(
                 {

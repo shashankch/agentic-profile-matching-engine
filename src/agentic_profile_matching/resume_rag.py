@@ -115,9 +115,7 @@ class MetadataExtractor:
             if line_stripped.upper() in SECTION_HEADERS:
                 continue
             words = line_stripped.split()
-            if 1 <= len(words) <= 4 and all(
-                w.replace(".", "").isalpha() for w in words
-            ):
+            if 1 <= len(words) <= 4 and all(w.replace(".", "").isalpha() for w in words):
                 return line_stripped.title()
             break
         return "Unknown"
@@ -219,9 +217,7 @@ class ResumeChunker:
 
 
 class ResumeRAGPipeline:
-    def __init__(
-        self, model_name: Optional[str] = None, collection_name: str = "resumes"
-    ):
+    def __init__(self, model_name: Optional[str] = None, collection_name: str = "resumes"):
         self.model_name = model_name or config.EMBEDDING_MODEL
         self.embedder = SentenceTransformer(self.model_name)
         self.client = chromadb.PersistentClient(path=config.VECTOR_DB_PATH)

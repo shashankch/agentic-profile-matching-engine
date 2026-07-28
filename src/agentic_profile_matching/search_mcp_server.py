@@ -1,3 +1,4 @@
+import os
 import sys
 import logging
 from pathlib import Path
@@ -76,24 +77,25 @@ def search_web(query: str) -> Dict:
             }
         )
 
-    # Attempt actual live search using DuckDuckGo
+    # Attempt actual live search using DuckDuckGo if no mock results found
     live_results = []
-    try:
-        from duckduckgo_search import DDGS
+    if not mock_results and not os.getenv("SKIP_LIVE_SEARCH"):
+        try:
+            from duckduckgo_search import DDGS
 
-        with DDGS() as ddgs:
-            # Query top 5 live results keylessly
-            ddgs_results = list(ddgs.text(query, max_results=5))
-            for r in ddgs_results:
-                live_results.append(
-                    {
-                        "title": r.get("title", ""),
-                        "url": r.get("href", ""),
-                        "snippet": r.get("body", ""),
-                    }
-                )
-    except Exception as e:
-        logger.warning(f"Live DuckDuckGo search failed or rate-limited: {e}")
+            with DDGS(timeout=5) as ddgs:
+                # Query top 5 live results keylessly
+                ddgs_results = list(ddgs.text(query, max_results=5))
+                for r in ddgs_results:
+                    live_results.append(
+                        {
+                            "title": r.get("title", ""),
+                            "url": r.get("href", ""),
+                            "snippet": r.get("body", ""),
+                        }
+                    )
+        except Exception as e:
+            logger.warning(f"Live DuckDuckGo search failed or rate-limited: {e}")
 
     # Combine results, prioritizing candidate mock results for standard sandbox files
     all_results = mock_results + live_results

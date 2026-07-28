@@ -39,3 +39,8 @@ extend-exclude = ["docs", "*.md"]
 select = ["E", "F", "W"]
 ignore = ["E501", "W293"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+

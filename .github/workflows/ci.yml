@@ -15,7 +15,9 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Safety net: job should never exceed 15 minutes under normal conditions.
+    # Real subprocess-based MCP tests are skipped in CI (see test_mcp.py).
+    timeout-minutes: 15
 
     steps:
     - uses: actions/checkout@v4
@@ -23,7 +25,10 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        # Python 3.12 ships PidfdChildWatcher on Linux — signal-free child process
+        # monitoring that is safe on background asyncio threads. This is the canonical
+        # fix for the asyncio SIGCHLD deadlock present in Python 3.10 on Ubuntu.
+        python-version: '3.12'
 
     - name: Cache Pip and Hugging Face Models
       uses: actions/cache@v4
@@ -31,9 +36,9 @@ jobs:
         path: |
           ~/.cache/pip
           ~/.cache/huggingface
-        key: ${{ runner.os }}-python-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}-hf
+        key: ${{ runner.os }}-py312-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}-hf
         restore-keys: |
-          ${{ runner.os }}-python-
+          ${{ runner.os }}-py312-
 
     - name: Install dependencies
       run: |
@@ -48,8 +53,11 @@ jobs:
         ruff format --check src/ tests/
 
     - name: Run tests
+      env:
+        PYTHONUNBUFFERED: "1"
+        CI: "true"
       run: |
-        pytest tests/
+        pytest tests/ -v
 
     - name: Test Ingestion Smoke Test
       run: |

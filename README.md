@@ -1,9 +1,14 @@
 # Agentic Profile Matching Engine
 
-[![Python CI](https://github.com/shashankch/agentic-profile-matching-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/shashankch/agentic-profile-matching-engine/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
-[![Linter: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+<p align="left">
+  <a href="https://github.com/shashankch/agentic-profile-matching-engine/actions/workflows/ci.yml"><img src="https://github.com/shashankch/agentic-profile-matching-engine/actions/workflows/ci.yml/badge.svg" alt="Python CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg" alt="Python Version"></a>
+  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Linter: Ruff"></a>
+  <a href="CONVENTIONS.md"><img src="https://img.shields.io/badge/Conventions-SDE2%2B%20Architectural-purple.svg" alt="Conventions"></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/Contributing-Welcome-green.svg" alt="Contributing"></a>
+</p>
+
 
 ## Overview
 
@@ -11,7 +16,7 @@ This project implements an interactive **Agentic Profile Matching Engine** built
 
 This project is fully **standalone** and encapsulates the document processing, vector storage ([ChromaDB]), and hybrid search (semantic + BM25 Okapi) logic replicated from [Milestone 1 (llm_file_system_assistant)](https://github.com/shashankch/llm_file_system_assistant) and [Milestone 2 (rag_profile_matching)](https://github.com/shashankch/rag-profile-match) to operate independently.
 
-Detailed design diagrams, specifications, and requirements can be found in the [docs/](docs/) directory.
+Detailed design diagrams, specifications, and requirements can be found in the [docs/](docs/) directory. Engineering conventions and contributing rules are maintained in [CONVENTIONS.md](CONVENTIONS.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
@@ -61,28 +66,38 @@ agentic_profile_matching/
 ├── tests/                         # Unit tests directory
 │   ├── __init__.py
 │   ├── test_fs_tools.py           # Unit tests for filesystem utilities
+│   ├── test_ingestion_service.py  # Unit tests for IngestionService layer
 │   ├── test_job_matcher.py        # Unit tests for job matching algorithm
 │   ├── test_tools.py              # Unit tests for assessment tools
 │   └── test_mcp.py                # Unit tests for MCP server/client & fallbacks
 ├── docs/
 │   ├── architecture.md            # Detailed technical design specifications
+│   ├── CONVENTIONS.md             # Engineering conventions & architectural standards
+│   ├── ROADMAP.md                 # Phased implementation roadmap with status tracking
 │   ├── state_machine.mermaid      # Mermaid diagram code of LangGraph state machine
 │   └── state_machine.png          # Rendered visual image of the state machine
+├── .github/
+│   ├── workflows/ci.yml           # GitHub Actions CI workflow config
+│   └── CONTRIBUTING.md            # GitHub contributing guidelines
 ├── pyproject.toml                 # PEP 621 compliant package setup configurations
 ├── Dockerfile                     # Streamlit app containerization config
-├── .github/workflows/ci.yml       # GitHub Actions CI workflow config
 ├── requirements.txt               # Dependencies list
-├── ROADMAP.md                     # Project implementation roadmap and future backlog
+├── CONVENTIONS.md                 # Root engineering conventions document
+├── CONTRIBUTING.md                # Root development setup and PR guide
+├── ROADMAP.md                     # Root roadmap document with emoji status key
 ├── CHANGELOG.md                   # Chronological log of notable changes
 └── README.md                      # Project documentation
 ```
 
-
 ---
 
-## Project Roadmap
+## Project Roadmap & Guidelines
 
-Details on implementation progress, milestones, and future goals (like multi-agent debate protocols, fairness/bias auditing, and native ATS integrations) are maintained in the root [ROADMAP.md](ROADMAP.md).
+Details on implementation progress, milestones, and status tracking (using clean status emojis: `✅` Completed, `⏳` In Progress, `⬜` Planned) are maintained in [ROADMAP.md](ROADMAP.md).
+
+For development standards and contributing instructions, refer to:
+- 📐 **[Engineering Conventions](CONVENTIONS.md)**: Architectural patterns, Pydantic V2 schemas, error boundaries, and testing rules.
+- 🤝 **[Contributing Guide](CONTRIBUTING.md)**: Local setup, running unit tests (`pytest`), Ruff formatting, and PR submission checklist.
 
 ---
 
@@ -146,18 +161,18 @@ Or run the automated scenario suite:
 python -m agentic_profile_matching.run_scenarios
 ```
 
-### 5. Running Unit Tests
+### 5. Running Unit Tests & Quality Checks
 
-Run the test suite to verify code modules, including the new MCP protocol test scenarios:
+Run the test suite to verify code modules, including MCP protocol test scenarios:
 
 ```bash
 # Run all tests
 pytest tests/
 
-# Run the MCP server/client specific tests
-python -m unittest tests/test_mcp.py
+# Run Ruff linter and formatter checks
+ruff check .
+ruff format .
 ```
-
 
 ### 6. [Docker] Deployment
 

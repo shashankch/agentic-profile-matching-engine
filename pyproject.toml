@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentic_profile_matching"
-version = "0.4.0"
+version = "0.5.0"
 description = "Production-grade Agentic Profile Matching Engine"
 readme = "README.md"
 requires-python = ">=3.10"

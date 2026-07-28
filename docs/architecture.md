@@ -330,8 +330,11 @@ Because MCP is inherently asynchronous (`asyncio`) and LangGraph workflow nodes/
 
 ---
 
-## 9. Project Roadmap & Milestones
+## 9. Project Roadmap & Development Standards
 
-The details regarding current implementation progress, release status of phases 1-5, and the long-term backlog of features are tracked in the root [ROADMAP.md](../ROADMAP.md).
+- **Implementation Roadmap**: Phased implementation plan, current progress status (tracked with emojis `✅`, `⏳`, `⬜`), and future backlog are maintained in [ROADMAP.md](../ROADMAP.md).
+- **Engineering Conventions**: Architectural design principles, Pydantic V2 schemas, state immutability, and resilience bounds are documented in [CONVENTIONS.md](../CONVENTIONS.md).
+- **Contributing Guidelines**: Environment setup, running unit tests (`pytest`), Ruff linter checks, and PR submission checklist are in [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ---
+

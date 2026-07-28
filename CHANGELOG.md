@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-28
+
+### Added
+- Created engineering conventions guidelines (`CONVENTIONS.md`) defining SDE2/SDE2+/FDE architectural principles, Pydantic V2 schemas, state immutability, and resilience bounds.
+- Created contributing guide (`CONTRIBUTING.md`) with environment setup, unit testing, Ruff linting, and PR checklists.
+- Added topic badges and repository metadata recommendations for recruiter and technical evaluation visibility.
+
+### Changed
+- Refactored `ROADMAP.md` status indicators from text markers (`[Completed]`, `[Planned]`) to clean emojis (`✅`, `⏳`, `⬜`).
+- Updated `README.md` project tree, top status badges, and documentation cross-references.
+
 ## [0.4.0] - 2026-07-26
 
 ### Added
@@ -42,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Built custom assessor screening tools for job requirements extraction, side-by-side matrices, and question generation.
 - Created Streamlit UI dashboard supporting real-time candidate vetting and dual-pane chat logs.
 
+[0.5.0]: https://github.com/shashankch/agentic-profile-matching-engine/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/shashankch/agentic-profile-matching-engine/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/shashankch/agentic-profile-matching-engine/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/shashankch/agentic-profile-matching-engine/compare/v0.1.0...v0.2.0

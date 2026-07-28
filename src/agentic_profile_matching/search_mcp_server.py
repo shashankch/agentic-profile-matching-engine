@@ -1,3 +1,4 @@
+import os
 import sys
 import logging
 from pathlib import Path
@@ -22,10 +23,7 @@ logging.basicConfig(
 logger = logging.getLogger("search_mcp_server")
 
 # Initialize FastMCP Server for Search
-mcp = FastMCP(
-    "SearchServer",
-    dependencies=["mcp", "duckduckgo-search", "chromadb", "sentence-transformers"],
-)
+mcp = FastMCP("SearchServer")
 
 
 @mcp.tool()
@@ -76,24 +74,25 @@ def search_web(query: str) -> Dict:
             }
         )
 
-    # Attempt actual live search using DuckDuckGo
+    # Attempt actual live search using DuckDuckGo if no mock results found
     live_results = []
-    try:
-        from duckduckgo_search import DDGS
+    if not mock_results and not os.getenv("SKIP_LIVE_SEARCH"):
+        try:
+            from duckduckgo_search import DDGS
 
-        with DDGS() as ddgs:
-            # Query top 5 live results keylessly
-            ddgs_results = list(ddgs.text(query, max_results=5))
-            for r in ddgs_results:
-                live_results.append(
-                    {
-                        "title": r.get("title", ""),
-                        "url": r.get("href", ""),
-                        "snippet": r.get("body", ""),
-                    }
-                )
-    except Exception as e:
-        logger.warning(f"Live DuckDuckGo search failed or rate-limited: {e}")
+            with DDGS(timeout=5) as ddgs:
+                # Query top 5 live results keylessly
+                ddgs_results = list(ddgs.text(query, max_results=5))
+                for r in ddgs_results:
+                    live_results.append(
+                        {
+                            "title": r.get("title", ""),
+                            "url": r.get("href", ""),
+                            "snippet": r.get("body", ""),
+                        }
+                    )
+        except Exception as e:
+            logger.warning(f"Live DuckDuckGo search failed or rate-limited: {e}")
 
     # Combine results, prioritizing candidate mock results for standard sandbox files
     all_results = mock_results + live_results
@@ -126,11 +125,8 @@ def search_chroma_db(query: str, limit: int = 5) -> Dict:
         from sentence_transformers import SentenceTransformer
         from agentic_profile_matching import config
 
-        # Load local embedding model andPersistentClient
-        embedder = SentenceTransformer(config.EMBEDDING_MODEL)
+        # Check persistent client and collection first
         client = chromadb.PersistentClient(path=config.VECTOR_DB_PATH)
-
-        # Get resumes collection
         collection_name = "resumes"
         try:
             collection = client.get_collection(collection_name)
@@ -139,6 +135,9 @@ def search_chroma_db(query: str, limit: int = 5) -> Dict:
                 "success": False,
                 "error": f"Collection '{collection_name}' not found. Ensure resumes are ingested.",
             }
+
+        # Load embedding model only after confirming collection exists
+        embedder = SentenceTransformer(config.EMBEDDING_MODEL)
 
         # Run semantic search
         query_emb = embedder.encode(query).tolist()

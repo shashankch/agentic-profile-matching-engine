@@ -1,3 +1,4 @@
+import os
 import sys
 import asyncio
 import threading
@@ -44,12 +45,14 @@ class MCPClientManager:
         # Configure local python environment command and paths from config
         fs_server_path = config.FILESYSTEM_SERVER_PATH
         search_server_path = config.SEARCH_SERVER_PATH
-
-        # Use python executable from the active virtualenv if running in a virtualenv
         python_exe = sys.executable or "python"
-
-        self.servers_config["filesystem"] = StdioServerParameters(command=python_exe, args=[str(fs_server_path)])
-        self.servers_config["search"] = StdioServerParameters(command=python_exe, args=[str(search_server_path)])
+        env_vars = {**os.environ, "PYTHONUNBUFFERED": "1"}
+        self.servers_config["filesystem"] = StdioServerParameters(
+            command=python_exe, args=["-u", str(fs_server_path)], env=env_vars
+        )
+        self.servers_config["search"] = StdioServerParameters(
+            command=python_exe, args=["-u", str(search_server_path)], env=env_vars
+        )
 
         self._initialized = True
 

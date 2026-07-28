@@ -23,7 +23,7 @@ dependencies = [
     "langchain-google-genai",
     "langchain-openai",
     "python-dotenv",
-    "mcp"
+    "mcp>=1.0.0"
 ]
 
 [tool.setuptools.packages.find]
@@ -38,4 +38,9 @@ extend-exclude = ["docs", "*.md"]
 [tool.ruff.lint]
 select = ["E", "F", "W"]
 ignore = ["E501", "W293"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
 

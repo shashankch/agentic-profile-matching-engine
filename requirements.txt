@@ -11,4 +11,4 @@ langchain-community
 langchain-groq
 langchain-google-genai
 langchain-openai
-mcp
+mcp>=1.0.0

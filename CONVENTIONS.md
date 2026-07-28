@@ -1,6 +1,6 @@
 # Agentic Profile Matching Engine: Engineering Conventions
 
-This document defines the architectural guidelines, code quality standards, and design conventions for the **Agentic Profile Matching Engine**. These standards reflect SDE2 / SDE2+ / Forward Deployed Engineer (FDE) expectations for production-grade software development.
+This document defines the architectural guidelines, code quality standards, and design conventions for the **Agentic Profile Matching Engine**. These standards reflect production-grade software development expectations.
 
 ---
 

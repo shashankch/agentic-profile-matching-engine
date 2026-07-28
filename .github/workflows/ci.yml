@@ -15,6 +15,9 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    # Safety net: job should never exceed 15 minutes under normal conditions.
+    # Real subprocess-based MCP tests are skipped in CI (see test_mcp.py).
+    timeout-minutes: 15
 
     steps:
     - uses: actions/checkout@v4
@@ -22,17 +25,22 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        # Python 3.12 ships PidfdChildWatcher on Linux — signal-free child process
+        # monitoring that is safe on background asyncio threads. This is the canonical
+        # fix for the asyncio SIGCHLD deadlock present in Python 3.10 on Ubuntu.
+        python-version: '3.12'
 
-    - name: Cache Pip and Hugging Face Models
+    - name: Cache Hugging Face Models
       uses: actions/cache@v4
       with:
-        path: |
-          ~/.cache/pip
-          ~/.cache/huggingface
-        key: ${{ runner.os }}-python-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}-hf
+        # Cache only HF model weights (~90 MB) — the only slow download.
+        # Pip cache is intentionally excluded: a stale pip cache can serve the
+        # wrong 'mcp' package (pre-MCP-SDK legacy package on PyPI) via restore-keys
+        # partial matches, causing ModuleNotFoundError for mcp.server.fastmcp.
+        path: ~/.cache/huggingface
+        key: ${{ runner.os }}-hf-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
         restore-keys: |
-          ${{ runner.os }}-python-
+          ${{ runner.os }}-hf-
 
     - name: Install dependencies
       run: |
@@ -40,6 +48,10 @@ jobs:
         pip install -r requirements.txt
         pip install -e .
         pip install pytest pytest-mock ruff
+        # Force-upgrade mcp to the correct Model Context Protocol SDK (>=1.0.0).
+        # This guards against any pip resolver edge-case that might have selected
+        # an older, unrelated 'mcp' package from PyPI.
+        pip install --upgrade "mcp>=1.0.0"
 
     - name: Run Ruff Linter & Format Check
       run: |
@@ -47,8 +59,11 @@ jobs:
         ruff format --check src/ tests/
 
     - name: Run tests
+      env:
+        PYTHONUNBUFFERED: "1"
+        CI: "true"
       run: |
-        pytest tests/
+        pytest tests/ -v
 
     - name: Test Ingestion Smoke Test
       run: |

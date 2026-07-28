@@ -27,7 +27,7 @@ logging.basicConfig(
 logger = logging.getLogger("filesystem_mcp_server")
 
 # Initialize FastMCP Server
-mcp = FastMCP("FileSystemServer", dependencies=["pypdf", "python-docx", "mcp"])
+mcp = FastMCP("FileSystemServer")
 
 # Active directory watcher threads tracking
 _active_watchers = {}

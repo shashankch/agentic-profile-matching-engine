@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.0] - 2026-07-28
 
 ### Added
-- Created engineering conventions guidelines (`CONVENTIONS.md`) defining SDE2/SDE2+/FDE architectural principles, Pydantic V2 schemas, state immutability, and resilience bounds.
+- Created engineering conventions guidelines (`CONVENTIONS.md`) defining architectural principles, Pydantic V2 schemas, state immutability, and resilience bounds.
 - Created contributing guide (`CONTRIBUTING.md`) with environment setup, unit testing, Ruff linting, and PR checklists.
 - Added topic badges and repository metadata recommendations for recruiter and technical evaluation visibility.
 

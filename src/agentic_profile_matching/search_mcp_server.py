@@ -23,10 +23,7 @@ logging.basicConfig(
 logger = logging.getLogger("search_mcp_server")
 
 # Initialize FastMCP Server for Search
-mcp = FastMCP(
-    "SearchServer",
-    dependencies=["mcp", "duckduckgo-search", "chromadb", "sentence-transformers"],
-)
+mcp = FastMCP("SearchServer")
 
 
 @mcp.tool()

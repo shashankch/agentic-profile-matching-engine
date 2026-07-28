@@ -30,15 +30,17 @@ jobs:
         # fix for the asyncio SIGCHLD deadlock present in Python 3.10 on Ubuntu.
         python-version: '3.12'
 
-    - name: Cache Pip and Hugging Face Models
+    - name: Cache Hugging Face Models
       uses: actions/cache@v4
       with:
-        path: |
-          ~/.cache/pip
-          ~/.cache/huggingface
-        key: ${{ runner.os }}-py312-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}-hf
+        # Cache only HF model weights (~90 MB) — the only slow download.
+        # Pip cache is intentionally excluded: a stale pip cache can serve the
+        # wrong 'mcp' package (pre-MCP-SDK legacy package on PyPI) via restore-keys
+        # partial matches, causing ModuleNotFoundError for mcp.server.fastmcp.
+        path: ~/.cache/huggingface
+        key: ${{ runner.os }}-hf-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
         restore-keys: |
-          ${{ runner.os }}-py312-
+          ${{ runner.os }}-hf-
 
     - name: Install dependencies
       run: |
@@ -46,6 +48,10 @@ jobs:
         pip install -r requirements.txt
         pip install -e .
         pip install pytest pytest-mock ruff
+        # Force-upgrade mcp to the correct Model Context Protocol SDK (>=1.0.0).
+        # This guards against any pip resolver edge-case that might have selected
+        # an older, unrelated 'mcp' package from PyPI.
+        pip install --upgrade "mcp>=1.0.0"
 
     - name: Run Ruff Linter & Format Check
       run: |

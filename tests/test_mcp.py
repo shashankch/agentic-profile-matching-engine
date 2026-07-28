@@ -63,10 +63,20 @@ def _call_tool_direct(server_module_path: str, tool_name: str, arguments: dict):
       - A list return (e.g. batch_process) → N blocks, one JSON-encoded item each.
 
     Returns the native Python object (dict or list) decoded from those blocks.
+
+    Raises unittest.SkipTest if the MCP SDK is not installed correctly so that
+    CI shows SKIP rather than ERROR when the mcp package is unavailable.
     """
     import importlib
 
-    module = importlib.import_module(server_module_path)
+    try:
+        module = importlib.import_module(server_module_path)
+    except ImportError as exc:
+        raise unittest.SkipTest(
+            f"MCP SDK not available ({exc}). "
+            "Ensure mcp>=1.0.0 is installed (Model Context Protocol SDK, not the legacy mcp package)."
+        ) from exc
+
     server_mcp = module.mcp  # FastMCP instance registered at module level
 
     async def _run():

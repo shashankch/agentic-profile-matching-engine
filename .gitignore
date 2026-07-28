@@ -80,3 +80,6 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+### Internal docs & tracking files (never committed) ###
+internal/
+internal/*

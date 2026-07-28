@@ -128,11 +128,8 @@ def search_chroma_db(query: str, limit: int = 5) -> Dict:
         from sentence_transformers import SentenceTransformer
         from agentic_profile_matching import config
 
-        # Load local embedding model andPersistentClient
-        embedder = SentenceTransformer(config.EMBEDDING_MODEL)
+        # Check persistent client and collection first
         client = chromadb.PersistentClient(path=config.VECTOR_DB_PATH)
-
-        # Get resumes collection
         collection_name = "resumes"
         try:
             collection = client.get_collection(collection_name)
@@ -141,6 +138,9 @@ def search_chroma_db(query: str, limit: int = 5) -> Dict:
                 "success": False,
                 "error": f"Collection '{collection_name}' not found. Ensure resumes are ingested.",
             }
+
+        # Load embedding model only after confirming collection exists
+        embedder = SentenceTransformer(config.EMBEDDING_MODEL)
 
         # Run semantic search
         query_emb = embedder.encode(query).tolist()

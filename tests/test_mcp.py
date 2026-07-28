@@ -25,12 +25,14 @@ class TestMCPIntegration(unittest.TestCase):
         self.test_file = self.test_dir / "mcp_dummy.txt"
         self.test_file.write_text("Hello from MCP test framework. Python programming is awesome.")
 
+    @classmethod
+    def tearDownClass(cls):
+        # Stop MCP clients cleanly once after all class tests complete
+        mcp_client.stop()
+
     def tearDown(self):
         # Restore configuration
         config.USE_MCP = self.original_use_mcp
-
-        # Stop MCP clients if running
-        mcp_client.stop()
 
         # Clean up sandbox
         if self.test_file.exists():

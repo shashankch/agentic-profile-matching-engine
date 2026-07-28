@@ -23,7 +23,7 @@ dependencies = [
     "langchain-google-genai",
     "langchain-openai",
     "python-dotenv",
-    "mcp"
+    "mcp>=1.0.0"
 ]
 
 [tool.setuptools.packages.find]

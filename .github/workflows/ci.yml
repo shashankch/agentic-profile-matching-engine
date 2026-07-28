@@ -19,6 +19,7 @@ jobs:
     # Real subprocess-based MCP tests are skipped in CI (see test_mcp.py).
     timeout-minutes: 15
 
+
     steps:
     - uses: actions/checkout@v4
 

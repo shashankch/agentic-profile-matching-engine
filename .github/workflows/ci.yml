@@ -19,7 +19,6 @@ jobs:
     # Real subprocess-based MCP tests are skipped in CI (see test_mcp.py).
     timeout-minutes: 15
 
-
     steps:
     - uses: actions/checkout@v4
 
@@ -42,6 +41,7 @@ jobs:
         key: ${{ runner.os }}-hf-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
         restore-keys: |
           ${{ runner.os }}-hf-
+
 
     - name: Install dependencies
       run: |

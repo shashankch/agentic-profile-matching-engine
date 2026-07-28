@@ -63,7 +63,6 @@ def _call_tool_direct(server_module_path: str, tool_name: str, arguments: dict):
       - A list return (e.g. batch_process) → N blocks, one JSON-encoded item each.
 
     Returns the native Python object (dict or list) decoded from those blocks.
-
     Raises unittest.SkipTest if the MCP SDK is not installed correctly so that
     CI shows SKIP rather than ERROR when the mcp package is unavailable.
     """

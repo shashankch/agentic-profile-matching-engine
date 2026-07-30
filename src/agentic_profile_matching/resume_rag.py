@@ -256,7 +256,7 @@ class ResumeRAGPipeline:
                     "section": ch["section"],
                 }
 
-                self.collection.add(
+                self.collection.upsert(
                     ids=[chunk_id],
                     documents=[ch["content"]],
                     embeddings=[emb],

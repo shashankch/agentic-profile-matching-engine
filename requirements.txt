@@ -12,3 +12,4 @@ langchain-groq
 langchain-google-genai
 langchain-openai
 mcp>=1.0.0
+duckduckgo-search>=6.0.0

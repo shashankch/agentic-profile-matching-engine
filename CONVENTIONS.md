@@ -42,7 +42,7 @@ This document defines the architectural guidelines, code quality standards, and 
    - Never use empty `except:` or `except Exception: pass` without logging or populating state warning flags.
 
 2. **Graceful State Degradation**
-   - If a non-critical tool node (e.g., DuckDuckGo web search or external candidate notes fetching) fails, log a warning, set a warning flag in `AgentState`, and allow the core pipeline to complete.
+   - If a non-critical tool node (e.g., Tavily API web search or external candidate notes fetching) fails, log a warning, set a warning flag in `AgentState`, and allow the core pipeline to complete.
 
 3. **Deterministic LLM Fallbacks**
    - Any LLM invocation expecting JSON must include retry or default template fallback logic in case of schema validation failures or API rate limits.

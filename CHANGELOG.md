@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- Made Vector store ingestion idempotent by migrating from `collection.add()` to `collection.upsert()` to prevent `DuplicateIDError` on re-runs.
+- Resolved `asyncio` SIGCHLD deadlock in CI tests by upgrading CI to Python 3.12 (which uses signal-free `PidfdChildWatcher`) and bypassing MCP subprocess transport in CI environments.
+- Fixed `ImportError` on fresh installs by ensuring search dependencies are explicitly listed in manifest files.
+
+### Changed
+- Swapped `duckduckgo-search` for `tavily-python` in MCP Search Server to utilize a reliable, AI-native search engine with 1,000 free API credits/month.
+
 
 ## [0.5.0] - 2026-07-28
 

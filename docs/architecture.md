@@ -167,7 +167,7 @@ The agent interacts with the workspace through schema-defined tools. These tools
   - *Returns*: 3-5 technical questions tailored to probe the candidate's gaps (e.g., *"You have extensive Python experience, but the JD requires Kubernetes. Can you explain your exposure to container orchestration?"*).
 
 ### D. Protocol-Enabled Search Tools (MCP Mode)
-- **`search_web(query: str) -> Dict`**: Performs live DuckDuckGo web searches for candidate public portfolios, GitHub repositories, or LinkedIn handles.
+- **`search_web(query: str) -> Dict`**: Performs live Tavily API web searches for candidate public portfolios, GitHub repositories, or LinkedIn handles.
 - **`search_chroma_db(query: str, limit: int) -> Dict`**: semantic RAG vector store search over ingested resumes, returning candidates, sections, and excerpts.
 - **`fetch_candidate_notes(candidate_name: str) -> Dict`**: Resolves mock screening notes compiled internally by HR coordinators.
 
@@ -310,7 +310,7 @@ graph TD
   - **`batch_process(filepaths)`**: Concurrently reads and parses multiple files using a `ThreadPoolExecutor` to speed up candidate loads.
   - **`resumes://{filename}` Namespace**: Standardized MCP Resource namespace permitting clients to read file contents directly from the server.
 - **`search_mcp_server.py`**: Exposes search tools to demonstrate multi-server coordination and candidate vetting:
-  - **`search_web(query)`**: Integrates keyless live web search using the `duckduckgo_search` library. Leverages structured mock fallback portfolios for sandbox/training candidates who are fictional, and queries public portals in real time for general searches.
+  - **`search_web(query)`**: Integrates live web search using the `tavily-python` library. Leverages structured mock fallback portfolios for sandbox/training candidates who are fictional, and queries public portals in real time for general searches.
   - **`search_chroma_db(query, limit)`**: Connects to the local candidate vector store to run semantic searches directly over resumes, returning candidate excerpts, section metadata, and similarity scores.
   - **`fetch_candidate_notes(candidate_name)`**: Fetches internal screening and HR notes.
 

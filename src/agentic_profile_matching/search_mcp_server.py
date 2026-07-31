@@ -6,11 +6,6 @@ from typing import Dict
 
 from mcp.server.fastmcp import FastMCP
 
-import warnings
-
-# Suppress duckduckgo_search library renaming runtime warnings
-warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*duckduckgo_search.*")
-
 # Add parent directory to sys.path to allow running as script directly
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -30,7 +25,8 @@ mcp = FastMCP("SearchServer")
 def search_web(query: str) -> Dict:
     """
     Search the web for candidate portfolios, Github repositories, or professional profiles.
-    Returns live DuckDuckGo search results, with structured mock fallbacks for training portfolios.
+    Uses Tavily AI Search for production-grade, LLM-optimized results with structured
+    mock fallbacks for known training profiles.
 
     Args:
         query: Query string.
@@ -74,25 +70,32 @@ def search_web(query: str) -> Dict:
             }
         )
 
-    # Attempt actual live search using DuckDuckGo if no mock results found
+    # Attempt actual live search using Tavily AI Search if no mock results found
     live_results = []
     if not mock_results and not os.getenv("SKIP_LIVE_SEARCH"):
-        try:
-            from duckduckgo_search import DDGS
+        tavily_api_key = os.getenv("TAVILY_API_KEY")
+        if tavily_api_key:
+            try:
+                from tavily import TavilyClient
 
-            with DDGS(timeout=5) as ddgs:
-                # Query top 5 live results keylessly
-                ddgs_results = list(ddgs.text(query, max_results=5))
-                for r in ddgs_results:
+                client = TavilyClient(api_key=tavily_api_key)
+                response = client.search(
+                    query=query,
+                    search_depth="basic",  # 1 credit per call (vs 2 for "advanced")
+                    max_results=5,
+                )
+                for r in response.get("results", []):
                     live_results.append(
                         {
                             "title": r.get("title", ""),
-                            "url": r.get("href", ""),
-                            "snippet": r.get("body", ""),
+                            "url": r.get("url", ""),
+                            "snippet": r.get("content", ""),
                         }
                     )
-        except Exception as e:
-            logger.warning(f"Live DuckDuckGo search failed or rate-limited: {e}")
+            except Exception as e:
+                logger.warning(f"Tavily search failed: {e}")
+        else:
+            logger.info("TAVILY_API_KEY not set — skipping live web search.")
 
     # Combine results, prioritizing candidate mock results for standard sandbox files
     all_results = mock_results + live_results

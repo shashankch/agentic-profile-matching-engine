@@ -24,7 +24,7 @@ dependencies = [
     "langchain-openai",
     "python-dotenv",
     "mcp>=1.0.0",
-    "duckduckgo-search>=6.0.0"
+    "tavily-python>=0.5.0"
 ]
 
 [tool.setuptools.packages.find]

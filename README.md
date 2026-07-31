@@ -25,7 +25,7 @@ Detailed design diagrams, specifications, and requirements can be found in the [
 - **LangGraph Agent Workflow**: Orchestrates requirements extraction, coarse search, deep profile diagnostics, hiring recommendations, and human feedback loops.
 - **[Model Context Protocol (MCP)][mcp] Dual-Mode Gateway**: Supports running direct local modules (Local Mode) or interfacing via stdio JSON-RPC 2.0 with separate MCP servers (MCP Mode) to handle file processes, directory-watching ingestions, and background thread-pool batch files parsing.
 - **Protocol-Enabled Search Engine**: Features a dedicated search MCP server supporting:
-  - Keyless live web searching via DuckDuckGo (with fallback mock profiles for fictitious sandbox resumes).
+  - Live web searching via Tavily API (with fallback mock profiles for fictitious sandbox resumes).
   - Semantic vector search over ChromaDB databases returning similarity scores, document chunks, and matching metrics.
   - Mock candidate notes fetching from internal HR screens.
 - **Multi-Round Screening**:

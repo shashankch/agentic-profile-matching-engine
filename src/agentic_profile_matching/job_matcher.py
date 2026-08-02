@@ -39,9 +39,7 @@ class JobMatcher:
         fingerprint = f"{len(documents)}_{hashlib.md5(sample_str.encode()).hexdigest()}"
 
         if self._cached_fingerprint != fingerprint or self._cached_bm25 is None:
-            tokenized_corpus = (
-                [doc.lower().split() for doc in documents] if documents else [["empty"]]
-            )
+            tokenized_corpus = [doc.lower().split() for doc in documents] if documents else [["empty"]]
             self._cached_bm25 = BM25Okapi(tokenized_corpus)
             self._cached_fingerprint = fingerprint
             self._cached_documents = documents

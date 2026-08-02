@@ -305,13 +305,15 @@ graph TD
 
 ### B. MCP Server Specifications
 - **`filesystem_mcp_server.py`**: Built using FastMCP. Registers all Milestone 1 tools (`read_file`, `list_files`, `write_file`, and `search_in_file`). Delegates ingestion business logic to the `IngestionService` boundary:
-  - **`IngestionService` (`services/ingestion_service.py`)**: Encapsulates single-file (`ingest_file`) and directory (`ingest_directory`) RAG ingestion mechanics, cleanly separating protocol handlers from vector database operations.
+  - **`IngestionService` (`services/ingestion_service.py`)**: Encapsulates single-file (`ingest_file`) and directory (`ingest_directory`) RAG ingestion mechanics, cleanly separating protocol handlers from vector database operations. Leverages section-scoped deterministic chunk IDs (`{filename}_{section}_{index}`) to prevent chunk duplication or orphaned chunks upon re-ingestion.
+  - **Pluggable Vector Store & Store Injection (`stores/`)**: Implements structural subtyping via `BaseVectorStore` `typing.Protocol` (`stores/base.py`) providing a unified engine-agnostic interface (`upsert`, `query`, `get_all`, `count`). Supports constructor injection into `ResumeRAGPipeline`, `JobMatcher`, `IngestionService`, and node graph configuration (`config["configurable"]["store"]`).
+  - **BM25 Corpus Index Caching**: `JobMatcher` caches tokenized corpus BM25 Okapi structures in memory, employing MD5 fingerprint invalidation based on document count and sample content hashes to avoid costly O(n) re-tokenization per search query.
   - **`watch_directory(directory)`**: Spawns a background watcher thread to monitor directory changes and trigger incremental auto-ingestion via `IngestionService.ingest_file()`.
   - **`batch_process(filepaths)`**: Concurrently reads and parses multiple files using a `ThreadPoolExecutor` to speed up candidate loads.
   - **`resumes://{filename}` Namespace**: Standardized MCP Resource namespace permitting clients to read file contents directly from the server.
 - **`search_mcp_server.py`**: Exposes search tools to demonstrate multi-server coordination and candidate vetting:
   - **`search_web(query)`**: Integrates live web search using the `tavily-python` library. Leverages structured mock fallback portfolios for sandbox/training candidates who are fictional, and queries public portals in real time for general searches.
-  - **`search_chroma_db(query, limit)`**: Connects to the local candidate vector store to run semantic searches directly over resumes, returning candidate excerpts, section metadata, and similarity scores.
+  - **`search_chroma_db(query, limit)`**: Connects via `ChromaVectorStore` to run semantic searches directly over resumes, returning candidate excerpts, section metadata, and similarity scores.
   - **`fetch_candidate_notes(candidate_name)`**: Fetches internal screening and HR notes.
 
 ### C. Persistent Connection Client Manager

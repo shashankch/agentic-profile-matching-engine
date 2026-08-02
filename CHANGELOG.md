@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Created pluggable vector store package (`stores/`) featuring `BaseVectorStore` structural `typing.Protocol` interface (`upsert`, `query`, `get_all`, `count`), `ChromaVectorStore`, and `QdrantVectorStore` stub.
+- Added domain exception hierarchy (`VectorStoreError`, `CollectionNotFoundError`) in `stores/exceptions.py`.
+- Added comprehensive unit test suite in `tests/test_stores.py` testing protocol compliance, vector operations, and upsert idempotency.
+- Implemented BM25 Okapi corpus index caching in `JobMatcher` with MD5 fingerprint hash-invalidation to eliminate per-query O(n) index rebuilds.
+
 ### Fixed
 - Made Vector store ingestion idempotent by migrating from `collection.add()` to `collection.upsert()` to prevent `DuplicateIDError` on re-runs.
 - Resolved `asyncio` SIGCHLD deadlock in CI tests by upgrading CI to Python 3.12 (which uses signal-free `PidfdChildWatcher`) and bypassing MCP subprocess transport in CI environments.
@@ -13,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Swapped `duckduckgo-search` for `tavily-python` in MCP Search Server to utilize a reliable, AI-native search engine with 1,000 free API credits/month.
+- Updated `IngestionService` and `ResumeRAGPipeline` chunk ID formatting to section-scoped deterministic keys (`{filename}_{section}_{index}`) to prevent chunk duplication or orphaned vectors on re-ingest.
+- Wired `BaseVectorStore` into `ResumeRAGPipeline`, `JobMatcher`, `IngestionService`, and `search_mcp_server.py` via constructor and tool dependency injection.
+- Refactored `agent/nodes.py` workflow nodes to leverage `_get_llm()` and `_get_store()` helpers to accept pre-instantiated LLM models and vector stores via graph configuration (`config["configurable"]`).
 
 
 ## [0.5.0] - 2026-07-28

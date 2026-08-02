@@ -2,10 +2,10 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 from sentence_transformers import SentenceTransformer
-import chromadb
 
 from agentic_profile_matching import config
 from agentic_profile_matching.fs_client import list_files, read_file
+from agentic_profile_matching.stores import BaseVectorStore, ChromaVectorStore
 
 SECTION_HEADERS = [
     "EXPERIENCE",
@@ -217,11 +217,15 @@ class ResumeChunker:
 
 
 class ResumeRAGPipeline:
-    def __init__(self, model_name: Optional[str] = None, collection_name: str = "resumes"):
+    def __init__(
+        self,
+        store: Optional[BaseVectorStore] = None,
+        model_name: Optional[str] = None,
+        collection_name: str = "resumes",
+    ):
+        self.store = store or ChromaVectorStore(collection_name=collection_name)
         self.model_name = model_name or config.EMBEDDING_MODEL
         self.embedder = SentenceTransformer(self.model_name)
-        self.client = chromadb.PersistentClient(path=config.VECTOR_DB_PATH)
-        self.collection = self.client.get_or_create_collection(collection_name)
 
     def ingest_directory(self, resume_dir: str):
         extractor = MetadataExtractor()
@@ -244,7 +248,8 @@ class ResumeRAGPipeline:
 
             for idx, ch in enumerate(chunks):
                 emb = self.embedder.encode(ch["content"]).tolist()
-                chunk_id = f"{f['name']}_{idx}"
+                section_clean = ch["section"].lower().replace(" ", "_")
+                chunk_id = f"{f['name']}_{section_clean}_{idx}"
 
                 chunk_meta = {
                     "candidate_name": meta["candidate_name"],
@@ -256,7 +261,7 @@ class ResumeRAGPipeline:
                     "section": ch["section"],
                 }
 
-                self.collection.upsert(
+                self.store.upsert(
                     ids=[chunk_id],
                     documents=[ch["content"]],
                     embeddings=[emb],

@@ -8,9 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Created pluggable vector store package (`stores/`) featuring `BaseVectorStore` structural `typing.Protocol` interface (`upsert`, `query`, `get_all`, `count`), `ChromaVectorStore`, and `QdrantVectorStore` stub.
-- Added domain exception hierarchy (`VectorStoreError`, `CollectionNotFoundError`) in `stores/exceptions.py`.
+- Introduced domain exception hierarchy (`EngineError`, `IngestionError`, `RetrievalError`, `LLMParseError`, `VectorStoreError`, `CollectionNotFoundError`) in `exceptions.py` and `stores/exceptions.py`.
+- Created Pydantic V2 output models (`JobRequirementsOutput`, `DeepScreenOutput`) and `parse_json_output()` parsing helper in `tools.py`.
 - Added comprehensive unit test suite in `tests/test_stores.py` testing protocol compliance, vector operations, and upsert idempotency.
+- Created `tests/test_exceptions.py` unit test suite testing domain exception hierarchy and Pydantic V2 LLM contract validation.
 - Implemented BM25 Okapi corpus index caching in `JobMatcher` with MD5 fingerprint hash-invalidation to eliminate per-query O(n) index rebuilds.
+- Created `tests/test_routers.py` unit test suite testing conditional graph routing classification and edge cases.
+
+### Security
+- Hardened state safety by removing sensitive credentials (`api_key`, `api_url`, `llm_provider`, `llm_model`) from serializable `AgentState` dictionary, passing them securely via graph invocation configuration (`config["configurable"]`).
 
 ### Fixed
 - Made Vector store ingestion idempotent by migrating from `collection.add()` to `collection.upsert()` to prevent `DuplicateIDError` on re-runs.
@@ -22,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `IngestionService` and `ResumeRAGPipeline` chunk ID formatting to section-scoped deterministic keys (`{filename}_{section}_{index}`) to prevent chunk duplication or orphaned vectors on re-ingest.
 - Wired `BaseVectorStore` into `ResumeRAGPipeline`, `JobMatcher`, `IngestionService`, and `search_mcp_server.py` via constructor and tool dependency injection.
 - Refactored `agent/nodes.py` workflow nodes to leverage `_get_llm()` and `_get_store()` helpers to accept pre-instantiated LLM models and vector stores via graph configuration (`config["configurable"]`).
+- Migrated `JobRequirements`, `CandidateMatch`, and `AgentState` in `agent/state.py` to standard `typing.TypedDict` for type safety and reducer compatibility.
+- Deduplicated control flow logic by consolidating JD-detection heuristics into `route_input` (`agent/routers.py`) as the single source of truth.
+- Configured configurable resume truncation character limit (`config.RESUME_TRUNCATION_LIMIT`) replacing hardcoded limit in `deep_screen_node`.
+- Refactored LLM output parsing in `tools.py` and `agent/nodes.py` (`extract_requirements`, `generate_interview_questions`, `deep_screen_node`, `adjust_requirements_node`) to use Pydantic V2 `model_validate_json()` with lenient fallback.
 
 
 ## [0.5.0] - 2026-07-28

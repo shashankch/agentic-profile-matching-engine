@@ -39,6 +39,7 @@ THROTTLE_DELAY = float(os.getenv("THROTTLE_DELAY", "1.5"))  # Delay in seconds t
 DEFAULT_COARSE_LIMIT = int(os.getenv("DEFAULT_COARSE_LIMIT", "10"))
 DEFAULT_DEEP_LIMIT = int(os.getenv("DEFAULT_DEEP_LIMIT", "10"))
 DEFAULT_RECOMMENDATION_LIMIT = int(os.getenv("DEFAULT_RECOMMENDATION_LIMIT", "5"))
+RESUME_TRUNCATION_LIMIT = int(os.getenv("RESUME_TRUNCATION_LIMIT", "12000"))
 
 # MCP Protocol Configuration
 USE_MCP = os.getenv("USE_MCP", "False").lower() in ("true", "1", "yes")

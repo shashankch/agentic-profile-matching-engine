@@ -28,13 +28,13 @@ graph LR
 ## 2. Core Agent Architecture (LangGraph)
 
 ### A. Agent State Design
-The LangGraph `State` is defined as a Python dictionary (or Pydantic class) representing the shared memory of the graph execution. It tracks history, constraints, and current results:
+The LangGraph `State` is defined as a Python `TypedDict` schema (`agent/state.py`) representing the shared memory of graph execution. It enforces field types while keeping sensitive credentials (`api_key`, `api_url`) out of serializable state checkpoints (which are passed securely via graph configuration `config["configurable"]`):
 
 ```python
-from typing import Dict, List, Any, Optional
+from typing import TypedDict, List, Dict, Any, Optional
 from langchain_core.messages import BaseMessage
 
-class JobRequirements(Dict):
+class JobRequirements(TypedDict, total=False):
     title: str
     must_have_skills: List[str]
     nice_to_have_skills: List[str]
@@ -42,7 +42,7 @@ class JobRequirements(Dict):
     education_level: str
     other_constraints: List[str]
 
-class CandidateMatch(Dict):
+class CandidateMatch(TypedDict, total=False):
     candidate_id: str
     name: str
     score: int
@@ -58,7 +58,7 @@ class CandidateMatch(Dict):
     screening_reasoning: str
     interview_questions: List[str]
 
-class AgentState(Dict):
+class AgentState(TypedDict, total=False):
     messages: List[BaseMessage]
     requirements: JobRequirements
     shortlist: List[CandidateMatch]
@@ -71,10 +71,6 @@ class AgentState(Dict):
     final_report: str
     feedback_pending: bool
     user_feedback: str
-    llm_provider: str
-    llm_model: str
-    api_key: str
-    api_url: Optional[str]
     errors: List[str]
 ```
 

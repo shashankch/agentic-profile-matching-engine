@@ -1,4 +1,3 @@
-import re
 import time
 import json
 from typing import Dict, Any, Optional
@@ -16,6 +15,9 @@ from agentic_profile_matching.tools import (
     compare_candidates,
     generate_interview_questions,
     execute_with_retry,
+    parse_json_output,
+    DeepScreenOutput,
+    JobRequirementsOutput,
 )
 from agentic_profile_matching.agent.state import AgentState
 from agentic_profile_matching.agent.prompts import (
@@ -33,19 +35,33 @@ def _get_llm(state: AgentState, config_dict: Optional[Dict[str, Any]] = None):
     Retrieves pre-instantiated LLM instance if passed via graph configuration or state,
     otherwise falls back to dynamically building the model via config.get_llm_model.
     """
-    if config_dict and isinstance(config_dict, dict):
-        configurable = config_dict.get("configurable", {})
-        if "llm" in configurable and configurable["llm"] is not None:
-            return configurable["llm"]
+    configurable = (config_dict or {}).get("configurable", {}) if isinstance(config_dict, dict) else {}
 
+    # 1. Pre-instantiated LLM instance
+    if "llm" in configurable and configurable["llm"] is not None:
+        return configurable["llm"]
     if isinstance(state, dict) and state.get("llm") is not None:
         return state.get("llm")
 
+    # 2. Configurable or state fallback parameters
+    provider = (
+        configurable.get("llm_provider")
+        or (state.get("llm_provider") if isinstance(state, dict) else None)
+        or config.DEFAULT_PROVIDER
+    )
+    model_name = (
+        configurable.get("llm_model")
+        or (state.get("llm_model") if isinstance(state, dict) else None)
+        or config.DEFAULT_MODEL
+    )
+    api_key = configurable.get("api_key") or (state.get("api_key") if isinstance(state, dict) else None) or ""
+    api_url = configurable.get("api_url") or (state.get("api_url") if isinstance(state, dict) else None)
+
     return config.get_llm_model(
-        provider=state.get("llm_provider", config.DEFAULT_PROVIDER),
-        model_name=state.get("llm_model", config.DEFAULT_MODEL),
-        api_key=state.get("api_key", ""),
-        api_url=state.get("api_url"),
+        provider=provider,
+        model_name=model_name,
+        api_key=api_key,
+        api_url=api_url,
     )
 
 
@@ -63,9 +79,8 @@ def _get_store(config_dict: Optional[Dict[str, Any]] = None) -> Optional[BaseVec
 
 def parse_input_node(state: AgentState, config_dict: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
-    Inspects the latest user message to classify it as a raw Job Description or refinement query.
+    Inspects and prepares state metadata prior to conditional graph routing.
     """
-    messages = state.get("messages", [])
     errors = state.get("errors")
     if errors is None:
         errors = []
@@ -73,48 +88,11 @@ def parse_input_node(state: AgentState, config_dict: Optional[Dict[str, Any]] = 
     # Capture the previous shortlist before updating
     prev_shortlist = state.get("shortlist", [])
 
-    if not messages:
-        return {
-            "current_round": 1,
-            "previous_shortlist": prev_shortlist,
-            "errors": errors,
-        }
-
-    try:
-        last_msg = messages[-1].content
-        # Simple, highly reliable heuristic: multi-line strings or presence of typical JD words
-        lines = [line.strip() for line in last_msg.split("\n") if line.strip()]
-        is_jd = len(lines) > 3 or any(
-            w in last_msg.lower()
-            for w in [
-                "job description",
-                "requirements:",
-                "duties:",
-                "responsibilities:",
-            ]
-        )
-
-        if is_jd:
-            print("Input classified as raw Job Description.")
-            return {
-                "current_round": 1,
-                "previous_shortlist": prev_shortlist,
-                "errors": errors,
-            }
-        else:
-            print("Input classified as refinement query.")
-            return {
-                "current_round": 1,
-                "previous_shortlist": prev_shortlist,
-                "errors": errors,
-            }
-    except Exception as e:
-        print(f"Error parsing input: {e}")
-        return {
-            "current_round": 1,
-            "previous_shortlist": prev_shortlist,
-            "errors": errors + [f"Input parsing warning: {str(e)}"],
-        }
+    return {
+        "current_round": 1,
+        "previous_shortlist": prev_shortlist,
+        "errors": errors,
+    }
 
 
 def extract_requirements_node(state: AgentState, config_dict: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -306,9 +284,9 @@ def deep_screen_node(state: AgentState, config_dict: Optional[Dict[str, Any]] = 
             continue
 
         resume_text = res["content"]
-        # Truncate content to avoid model token limits (approx 12,000 characters)
-        if len(resume_text) > 12000:
-            resume_text = resume_text[:12000] + "... [truncated]"
+        # Truncate content to avoid model token limits
+        if len(resume_text) > config.RESUME_TRUNCATION_LIMIT:
+            resume_text = resume_text[: config.RESUME_TRUNCATION_LIMIT] + "... [truncated]"
 
         # Throttling delay between LLM calls to respect API limits
         if idx > 0:
@@ -334,15 +312,7 @@ Candidate Resume Text:
                 HumanMessage(content=prompt_content),
             ]
             response = llm.invoke(messages)
-            content = response.content.strip()
-            if content.startswith("```"):
-                content = re.sub(r"^```(?:json)?\n", "", content)
-                content = re.sub(r"\n```$", "", content)
-            start_idx = content.find("{")
-            end_idx = content.rfind("}")
-            if start_idx != -1 and end_idx != -1:
-                content = content[start_idx : end_idx + 1]
-            return json.loads(content)
+            return parse_json_output(response.content, model_cls=DeepScreenOutput)
 
         try:
             result = execute_with_retry(_call_deep_screen)
@@ -636,15 +606,7 @@ def adjust_requirements_node(state: AgentState, config_dict: Optional[Dict[str, 
             HumanMessage(content=f"Update the requirements using this instruction: '{last_msg}'"),
         ]
         response = llm.invoke(messages_prompt)
-        content = response.content.strip()
-        if content.startswith("```"):
-            content = re.sub(r"^```(?:json)?\n", "", content)
-            content = re.sub(r"\n```$", "", content)
-        start_idx = content.find("{")
-        end_idx = content.rfind("}")
-        if start_idx != -1 and end_idx != -1:
-            content = content[start_idx : end_idx + 1]
-        return json.loads(content)
+        return parse_json_output(response.content, model_cls=JobRequirementsOutput)
 
     try:
         updated_reqs = execute_with_retry(_call_adjust)

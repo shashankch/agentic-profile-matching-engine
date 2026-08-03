@@ -124,27 +124,21 @@ def search_chroma_db(query: str, limit: int = 5) -> Dict:
     """
     logger.info(f"MCP Search Tool call: search_chroma_db for '{query}'")
     try:
-        import chromadb
         from sentence_transformers import SentenceTransformer
         from agentic_profile_matching import config
+        from agentic_profile_matching.stores import ChromaVectorStore
 
-        # Check persistent client and collection first
-        client = chromadb.PersistentClient(path=config.VECTOR_DB_PATH)
-        collection_name = "resumes"
-        try:
-            collection = client.get_collection(collection_name)
-        except Exception:
+        store = ChromaVectorStore(collection_name="resumes")
+        if store.count() == 0:
             return {
                 "success": False,
-                "error": f"Collection '{collection_name}' not found. Ensure resumes are ingested.",
+                "error": "Collection 'resumes' is empty or not found. Ensure resumes are ingested.",
             }
 
-        # Load embedding model only after confirming collection exists
+        # Load embedding model and run search
         embedder = SentenceTransformer(config.EMBEDDING_MODEL)
-
-        # Run semantic search
         query_emb = embedder.encode(query).tolist()
-        results = collection.query(query_embeddings=[query_emb], n_results=limit)
+        results = store.query(query_embedding=query_emb, n_results=limit)
 
         formatted_results = []
         if results and "documents" in results and results["documents"]:

@@ -1,23 +1,57 @@
-import re
+import hashlib
 import json
-from typing import Dict, List, Optional
+import re
+from typing import Any, Dict, List, Optional, Tuple
 from sentence_transformers import SentenceTransformer
 from rank_bm25 import BM25Okapi
-import chromadb
 
 from agentic_profile_matching import config
+from agentic_profile_matching.stores import BaseVectorStore, ChromaVectorStore
 
 
 class JobMatcher:
-    def __init__(self, model_name: Optional[str] = None, collection_name: str = "resumes"):
+    def __init__(
+        self,
+        store: Optional[BaseVectorStore] = None,
+        model_name: Optional[str] = None,
+        collection_name: str = "resumes",
+    ):
+        self.store = store or ChromaVectorStore(collection_name=collection_name)
         self.model_name = model_name or config.EMBEDDING_MODEL
         self.embedder = SentenceTransformer(self.model_name)
-        self.client = chromadb.PersistentClient(path=config.VECTOR_DB_PATH)
-        try:
-            self.collection = self.client.get_collection(collection_name)
-        except Exception:
-            print(f"Collection '{collection_name}' not found. Creating it to avoid crash.")
-            self.collection = self.client.get_or_create_collection(collection_name)
+
+        # Cache attributes for BM25 Okapi index
+        self._cached_bm25: Optional[BM25Okapi] = None
+        self._cached_fingerprint: Optional[str] = None
+        self._cached_documents: List[str] = []
+        self._cached_metadatas: List[Dict[str, Any]] = []
+        self._cached_ids: List[str] = []
+
+    def _get_bm25_and_corpus(
+        self,
+    ) -> Tuple[BM25Okapi, List[str], List[Dict[str, Any]], List[str]]:
+        all_chunks = self.store.get_all()
+        documents = all_chunks.get("documents", []) or []
+        metadatas = all_chunks.get("metadatas", []) or []
+        ids = all_chunks.get("ids", []) or []
+
+        sample_str = "".join(documents[:5]) if documents else ""
+        fingerprint = f"{len(documents)}_{hashlib.md5(sample_str.encode()).hexdigest()}"
+
+        if self._cached_fingerprint != fingerprint or self._cached_bm25 is None:
+            tokenized_corpus = [doc.lower().split() for doc in documents] if documents else [["empty"]]
+            self._cached_bm25 = BM25Okapi(tokenized_corpus)
+            self._cached_fingerprint = fingerprint
+            self._cached_documents = documents
+            self._cached_metadatas = metadatas
+            self._cached_ids = ids
+
+        return (
+            self._cached_bm25,
+            self._cached_documents,
+            self._cached_metadatas,
+            self._cached_ids,
+        )
 
     def match(
         self,
@@ -52,18 +86,15 @@ class JobMatcher:
         else:
             print(f"Applying must-have skills filter: {must_have_skills}")
 
-        # Fetch all documents to build the BM25 index for keyword search
-        all_chunks = self.collection.get()
-        documents = all_chunks["documents"]
-        metadatas = all_chunks["metadatas"]
-        ids = all_chunks["ids"]
+        # Fetch cached BM25 index and corpus data
+        bm25, documents, metadatas, ids = self._get_bm25_and_corpus()
 
         if not documents:
             return {"job_description": job_description, "top_matches": []}
 
-        # 1. Semantic Search using ChromaDB
+        # 1. Semantic Search using Vector Store
         query_emb = self.embedder.encode(job_description).tolist()
-        results = self.collection.query(query_embeddings=[query_emb], n_results=len(ids))
+        results = self.store.query(query_embedding=query_emb, n_results=len(ids))
 
         semantic_scores_dict = {}
         if results and "ids" in results and len(results["ids"]) > 0:
@@ -74,9 +105,7 @@ class JobMatcher:
                 sim = 1.0 - (dist / 2.0)
                 semantic_scores_dict[r_id] = max(0.0, min(1.0, sim))
 
-        # 2. Keyword Search using BM25
-        tokenized_corpus = [doc.lower().split() for doc in documents]
-        bm25 = BM25Okapi(tokenized_corpus)
+        # 2. Keyword Search using cached BM25
         tokenized_query = job_description.lower().split()
         bm25_scores = bm25.get_scores(tokenized_query)
 

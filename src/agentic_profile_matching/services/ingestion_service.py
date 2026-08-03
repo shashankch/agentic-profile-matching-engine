@@ -12,6 +12,8 @@ from agentic_profile_matching.fs_tools import (
     list_files as direct_list_files,
 )
 
+from agentic_profile_matching.stores import BaseVectorStore
+
 logger = logging.getLogger("ingestion_service")
 
 
@@ -21,14 +23,21 @@ class IngestionService:
     Decouples protocol handlers (e.g., FastMCP filesystem server) from RAG ingestion mechanics.
     """
 
-    def __init__(self, pipeline: Optional[ResumeRAGPipeline] = None):
+    def __init__(
+        self,
+        store: Optional[BaseVectorStore] = None,
+        pipeline: Optional[ResumeRAGPipeline] = None,
+    ):
+        self._store = store
         self._pipeline = pipeline
+        if self._pipeline is None and self._store is not None:
+            self._pipeline = ResumeRAGPipeline(store=self._store)
 
     @property
     def pipeline(self) -> ResumeRAGPipeline:
         """Lazily initialize the underlying vector store RAG pipeline if not injected."""
         if self._pipeline is None:
-            self._pipeline = ResumeRAGPipeline()
+            self._pipeline = ResumeRAGPipeline(store=self._store)
         return self._pipeline
 
     def ingest_file(self, filepath: str) -> Dict[str, Any]:
@@ -81,7 +90,8 @@ class IngestionService:
 
         for idx, ch in enumerate(chunks):
             emb = pipeline.embedder.encode(ch["content"]).tolist()
-            chunk_id = f"{filename}_{idx}"
+            section_clean = ch["section"].lower().replace(" ", "_")
+            chunk_id = f"{filename}_{section_clean}_{idx}"
             chunk_meta = {
                 "candidate_name": meta["candidate_name"],
                 "skills": ", ".join(meta["skills"]),

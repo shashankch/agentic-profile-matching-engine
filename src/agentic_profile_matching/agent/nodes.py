@@ -1,7 +1,7 @@
 import re
 import time
 import json
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_core.tools import tool
@@ -25,9 +25,43 @@ from agentic_profile_matching.agent.prompts import (
     ADJUST_REQUIREMENTS_SYSTEM_PROMPT,
     CONVERSATIONAL_QUERY_SYSTEM_PROMPT,
 )
+from agentic_profile_matching.stores import BaseVectorStore
 
 
-def parse_input_node(state: AgentState) -> Dict[str, Any]:
+def _get_llm(state: AgentState, config_dict: Optional[Dict[str, Any]] = None):
+    """
+    Retrieves pre-instantiated LLM instance if passed via graph configuration or state,
+    otherwise falls back to dynamically building the model via config.get_llm_model.
+    """
+    if config_dict and isinstance(config_dict, dict):
+        configurable = config_dict.get("configurable", {})
+        if "llm" in configurable and configurable["llm"] is not None:
+            return configurable["llm"]
+
+    if isinstance(state, dict) and state.get("llm") is not None:
+        return state.get("llm")
+
+    return config.get_llm_model(
+        provider=state.get("llm_provider", config.DEFAULT_PROVIDER),
+        model_name=state.get("llm_model", config.DEFAULT_MODEL),
+        api_key=state.get("api_key", ""),
+        api_url=state.get("api_url"),
+    )
+
+
+def _get_store(config_dict: Optional[Dict[str, Any]] = None) -> Optional[BaseVectorStore]:
+    """
+    Retrieves vector store instance passed via graph configuration,
+    returning None to fall back to ChromaVectorStore default in JobMatcher.
+    """
+    if config_dict and isinstance(config_dict, dict):
+        configurable = config_dict.get("configurable", {})
+        if "store" in configurable and configurable["store"] is not None:
+            return configurable["store"]
+    return None
+
+
+def parse_input_node(state: AgentState, config_dict: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Inspects the latest user message to classify it as a raw Job Description or refinement query.
     """
@@ -83,7 +117,7 @@ def parse_input_node(state: AgentState) -> Dict[str, Any]:
         }
 
 
-def extract_requirements_node(state: AgentState) -> Dict[str, Any]:
+def extract_requirements_node(state: AgentState, config_dict: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     LLM extracts structured job requirements from raw input message content.
     """
@@ -107,13 +141,8 @@ def extract_requirements_node(state: AgentState) -> Dict[str, Any]:
     try:
         last_msg = messages[-1].content
 
-        # Dynamic LLM builder
-        llm = config.get_llm_model(
-            provider=state.get("llm_provider", config.DEFAULT_PROVIDER),
-            model_name=state.get("llm_model", config.DEFAULT_MODEL),
-            api_key=state.get("api_key", ""),
-            api_url=state.get("api_url"),
-        )
+        # Dynamic LLM builder with injection support
+        llm = _get_llm(state, config_dict)
 
         print("Extracting job requirements from input...")
         requirements = extract_requirements(last_msg, llm)
@@ -128,7 +157,7 @@ def extract_requirements_node(state: AgentState) -> Dict[str, Any]:
         return {"requirements": fallback_reqs, "current_round": 1, "errors": errors}
 
 
-def search_resumes_node(state: AgentState) -> Dict[str, Any]:
+def search_resumes_node(state: AgentState, config_dict: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Retrieves candidate resumes matching constraints using local hybrid search.
     """
@@ -145,8 +174,9 @@ def search_resumes_node(state: AgentState) -> Dict[str, Any]:
     retrieval_k = max(int(coarse_limit * 1.5), 15)
 
     try:
-        # Query with requirements to find top candidates
-        matcher = JobMatcher()
+        # Query with requirements to find top candidates using injected store (if any)
+        store = _get_store(config_dict)
+        matcher = JobMatcher(store=store)
 
         query_text = f"Job Title: {title}. Must-Have Skills: {', '.join(must_have)}. Experience: {min_exp} years."
         print(f"Retrieving candidate resumes for requirements: {requirements}")
@@ -236,7 +266,7 @@ def rank_candidates_node(state: AgentState) -> Dict[str, Any]:
         return {"shortlist": [], "current_round": 1, "errors": errors}
 
 
-def deep_screen_node(state: AgentState) -> Dict[str, Any]:
+def deep_screen_node(state: AgentState, config_dict: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Round 2: profile deep text audit.
     Evaluates Top 5 candidate resumes sequentially, mapping strengths, gaps, and suggestions.
@@ -248,12 +278,7 @@ def deep_screen_node(state: AgentState) -> Dict[str, Any]:
         errors = []
 
     try:
-        llm = config.get_llm_model(
-            provider=state.get("llm_provider", config.DEFAULT_PROVIDER),
-            model_name=state.get("llm_model", config.DEFAULT_MODEL),
-            api_key=state.get("api_key", ""),
-            api_url=state.get("api_url"),
-        )
+        llm = _get_llm(state, config_dict)
     except Exception as e:
         print(f"Error building LLM model in deep_screen_node: {e}")
         errors.append(f"Failed to build LLM for deep screening: {str(e)}")
@@ -339,7 +364,7 @@ Candidate Resume Text:
     return {"shortlist": shortlist, "current_round": 2, "errors": errors}
 
 
-def recommendation_node(state: AgentState) -> Dict[str, Any]:
+def recommendation_node(state: AgentState, config_dict: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Round 3: Final Hiring decisions & customized technical screening questions generator.
     """
@@ -350,12 +375,7 @@ def recommendation_node(state: AgentState) -> Dict[str, Any]:
         errors = []
 
     try:
-        llm = config.get_llm_model(
-            provider=state.get("llm_provider", config.DEFAULT_PROVIDER),
-            model_name=state.get("llm_model", config.DEFAULT_MODEL),
-            api_key=state.get("api_key", ""),
-            api_url=state.get("api_url"),
-        )
+        llm = _get_llm(state, config_dict)
     except Exception as e:
         print(f"Error building LLM model in recommendation_node: {e}")
         errors.append(f"Failed to build LLM for interview question generation: {str(e)}")
@@ -409,7 +429,7 @@ def recommendation_node(state: AgentState) -> Dict[str, Any]:
     return {"shortlist": shortlist, "current_round": 3, "errors": errors}
 
 
-def generate_report_node(state: AgentState) -> Dict[str, Any]:
+def generate_report_node(state: AgentState, config_dict: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Compiles candidate records, analysis reports, and interview matrices into a Markdown report.
     """
@@ -436,12 +456,7 @@ def generate_report_node(state: AgentState) -> Dict[str, Any]:
                 break
 
         if feedback_instructions:
-            llm = config.get_llm_model(
-                provider=state.get("llm_provider", config.DEFAULT_PROVIDER),
-                model_name=state.get("llm_model", config.DEFAULT_MODEL),
-                api_key=state.get("api_key", ""),
-                api_url=state.get("api_url"),
-            )
+            llm = _get_llm(state, config_dict)
 
             prev_summary = "\n".join(
                 f"  {idx + 1}. {c['name']} (Score: {c['score']}/100, Status: {c.get('screening_status', 'Shortlisted')}, Matched Skills: {c.get('matched_skills', [])})"
@@ -598,7 +613,7 @@ def generate_report_node(state: AgentState) -> Dict[str, Any]:
     }
 
 
-def adjust_requirements_node(state: AgentState) -> Dict[str, Any]:
+def adjust_requirements_node(state: AgentState, config_dict: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Conversational feedback loop: refines requirements constraints using user instructions.
     """
@@ -609,12 +624,7 @@ def adjust_requirements_node(state: AgentState) -> Dict[str, Any]:
     last_msg = messages[-1].content
     current_reqs = state.get("requirements", {})
 
-    llm = config.get_llm_model(
-        provider=state.get("llm_provider", config.DEFAULT_PROVIDER),
-        model_name=state.get("llm_model", config.DEFAULT_MODEL),
-        api_key=state.get("api_key", ""),
-        api_url=state.get("api_url"),
-    )
+    llm = _get_llm(state, config_dict)
 
     print(f"Refining job requirements based on feedback: '{last_msg}'")
 
@@ -667,7 +677,7 @@ def fetch_candidate_notes_tool(candidate_name: str) -> str:
     return str(res)
 
 
-def conversational_query_node(state: AgentState) -> Dict[str, Any]:
+def conversational_query_node(state: AgentState, config_dict: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Directly answers conversational questions from the recruiter (e.g. comparison queries, rankings explanation)
     using the active candidate shortlist data, with optional web search and candidate notes tools.
@@ -680,12 +690,7 @@ def conversational_query_node(state: AgentState) -> Dict[str, Any]:
     shortlist = state.get("shortlist", [])
     requirements = state.get("requirements", {})
 
-    llm = config.get_llm_model(
-        provider=state.get("llm_provider", config.DEFAULT_PROVIDER),
-        model_name=state.get("llm_model", config.DEFAULT_MODEL),
-        api_key=state.get("api_key", ""),
-        api_url=state.get("api_url"),
-    )
+    llm = _get_llm(state, config_dict)
 
     print(f"Executing Conversational Query with search tools: '{last_msg}'")
 

@@ -37,8 +37,8 @@ This document outlines the phased plan for building the Agentic Profile Matching
 
 8. **Phase 8: Enterprise Abstractions & Background Workers** ⏳
    - **8.1 — Protocol / Business Logic Separation** ✅: Introduce a dedicated `IngestionService` layer to cleanly decouple file-processing business logic from the MCP protocol tool handlers.
-   - **8.2 — Pluggable Vector Store Abstraction** ⏳: Define a `BaseVectorStore` protocol, implement a default `ChromaVectorStore` with idempotent upsert ingestion and deterministic chunk IDs, and add a `QdrantVectorStore` stub to validate the abstraction boundary.
-   - **8.3 — Store Injection & BM25 Index Caching** ⬜: Wire `BaseVectorStore` into `ResumeRAGPipeline` and `JobMatcher` via constructor injection; cache the BM25 corpus index on construction to eliminate per-query O(n) rebuilds.
+   - **8.2 — Pluggable Vector Store Abstraction** ✅: Define a `BaseVectorStore` protocol, implement a default `ChromaVectorStore` with idempotent upsert ingestion and deterministic chunk IDs, and add a `QdrantVectorStore` stub to validate the abstraction boundary.
+   - **8.3 — Store Injection & BM25 Index Caching** ✅: Wire `BaseVectorStore` into `ResumeRAGPipeline` and `JobMatcher` via constructor injection; cache the BM25 corpus index on construction to eliminate per-query O(n) rebuilds.
    - **8.4 — Type-Safe State Migration & Security Hardening** ⬜: Migrate `AgentState` to `TypedDict`; migrate LLM output schemas to Pydantic V2 `BaseModel`; remove API credentials from serializable graph state.
    - **8.5 — Pydantic V2 LLM Output Contracts** ⬜: Replace fragile regex-based JSON parsing of LLM responses with Pydantic V2 `model_validate_json()` with graceful fallback.
    - **8.6 — Celery + Redis Background Workers** ⬜: Implement [Celery] + [Redis] async task queue for non-blocking deep screening and background ingestion; add Docker Compose orchestration.

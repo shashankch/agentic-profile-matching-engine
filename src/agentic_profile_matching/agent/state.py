@@ -1,8 +1,8 @@
-from typing import Dict, List, Optional
+from typing import TypedDict, List, Optional
 from langchain_core.messages import BaseMessage
 
 
-class JobRequirements(Dict):
+class JobRequirements(TypedDict, total=False):
     title: str
     must_have_skills: List[str]
     nice_to_have_skills: List[str]
@@ -11,7 +11,7 @@ class JobRequirements(Dict):
     other_constraints: List[str]
 
 
-class CandidateMatch(Dict):
+class CandidateMatch(TypedDict, total=False):
     candidate_id: str
     name: str
     score: int
@@ -28,7 +28,7 @@ class CandidateMatch(Dict):
     interview_questions: List[str]
 
 
-class AgentState(Dict):
+class AgentState(TypedDict, total=False):
     messages: List[BaseMessage]
     requirements: JobRequirements
     shortlist: List[CandidateMatch]
@@ -41,8 +41,4 @@ class AgentState(Dict):
     final_report: str
     feedback_pending: bool
     user_feedback: str
-    llm_provider: str
-    llm_model: str
-    api_key: str
-    api_url: Optional[str]
     errors: List[str]

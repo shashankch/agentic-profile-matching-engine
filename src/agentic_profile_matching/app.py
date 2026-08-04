@@ -310,17 +310,21 @@ if st.sidebar.button("Sync Constraints & Re-Rank"):
         "final_report": "",
         "feedback_pending": False,
         "user_feedback": "",
-        "llm_provider": llm_provider,
-        "llm_model": llm_model,
-        "api_key": api_key,
-        "api_url": api_url,
         "errors": [],
     }
 
     with st.spinner("Re-ranking candidates based on updated constraints..."):
         result = matching_agent_workflow.invoke(
             state_input,
-            config={"configurable": {"thread_id": "streamlit-session-thread"}},
+            config={
+                "configurable": {
+                    "thread_id": "streamlit-session-thread",
+                    "api_key": api_key,
+                    "api_url": api_url,
+                    "llm_provider": llm_provider,
+                    "llm_model": llm_model,
+                }
+            },
         )
         st.session_state["shortlist"] = result.get("shortlist", [])
         st.session_state["final_report"] = result.get("final_report", "")
@@ -389,10 +393,6 @@ with tab1:
             "final_report": st.session_state["final_report"],
             "feedback_pending": False,
             "user_feedback": "",
-            "llm_provider": llm_provider,
-            "llm_model": llm_model,
-            "api_key": api_key,
-            "api_url": api_url,
             "errors": [],
         }
 
@@ -401,7 +401,15 @@ with tab1:
             try:
                 result = matching_agent_workflow.invoke(
                     state_input,
-                    config={"configurable": {"thread_id": "streamlit-session-thread"}},
+                    config={
+                        "configurable": {
+                            "thread_id": "streamlit-session-thread",
+                            "api_key": api_key,
+                            "api_url": api_url,
+                            "llm_provider": llm_provider,
+                            "llm_model": llm_model,
+                        }
+                    },
                 )
 
                 # Copy updated state outputs to session state

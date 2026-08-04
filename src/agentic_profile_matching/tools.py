@@ -4,6 +4,8 @@ import json
 from typing import Dict, List, Any
 from pathlib import Path
 from langchain_core.messages import SystemMessage, HumanMessage
+from pydantic import BaseModel, Field, ValidationError
+from agentic_profile_matching.exceptions import LLMParseError
 
 
 def execute_with_retry(func, *args, **kwargs):
@@ -26,6 +28,60 @@ def execute_with_retry(func, *args, **kwargs):
             else:
                 raise e
     return func(*args, **kwargs)
+
+
+class JobRequirementsOutput(BaseModel):
+    title: str = Field(default="Software Engineer")
+    must_have_skills: List[str] = Field(default_factory=list)
+    nice_to_have_skills: List[str] = Field(default_factory=list)
+    min_experience_years: int = Field(default=0)
+    education_level: str = Field(default="Not Specified")
+    other_constraints: List[str] = Field(default_factory=list)
+
+
+class DeepScreenOutput(BaseModel):
+    strengths: List[str] = Field(default_factory=list)
+    gaps: List[str] = Field(default_factory=list)
+    improvement_suggestions: str = Field(default="")
+    screening_status: str = Field(default="Screened")
+    screening_reasoning: str = Field(default="")
+
+
+def parse_json_output(content: str, model_cls=None) -> Any:
+    """
+    Parses raw LLM string response into JSON or validates against a Pydantic V2 model.
+    Handles markdown block wrappers, trailing comments, and fallback JSON bounds.
+    """
+    cleaned = content.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\n?", "", cleaned)
+        cleaned = re.sub(r"\n?```$", "", cleaned).strip()
+
+    if model_cls is not None:
+        try:
+            return model_cls.model_validate_json(cleaned).model_dump()
+        except (ValidationError, Exception):
+            pass
+
+    start_obj = cleaned.find("{")
+    end_obj = cleaned.rfind("}")
+    start_arr = cleaned.find("[")
+    end_arr = cleaned.rfind("]")
+
+    if start_obj != -1 and end_obj != -1 and (start_arr == -1 or start_obj < start_arr):
+        raw_json = cleaned[start_obj : end_obj + 1]
+    elif start_arr != -1 and end_arr != -1:
+        raw_json = cleaned[start_arr : end_arr + 1]
+    else:
+        raw_json = cleaned
+
+    try:
+        parsed = json.loads(raw_json)
+        if model_cls is not None:
+            return model_cls.model_validate(parsed).model_dump()
+        return parsed
+    except Exception as e:
+        raise LLMParseError(f"Failed to parse LLM output JSON: {e}") from e
 
 
 def extract_requirements(jd: str, llm) -> Dict[str, Any]:
@@ -51,33 +107,14 @@ The JSON structure must match this exact format:
             HumanMessage(content=f"Extract requirements for this Job Description:\n\n{jd}"),
         ]
         response = llm.invoke(messages)
-        content = response.content.strip()
-
-        # Clean JSON markdown blocks
-        if content.startswith("```"):
-            content = re.sub(r"^```(?:json)?\n", "", content)
-            content = re.sub(r"\n```$", "", content)
-
-        start_idx = content.find("{")
-        end_idx = content.rfind("}")
-        if start_idx != -1 and end_idx != -1:
-            content = content[start_idx : end_idx + 1]
-
-        return json.loads(content)
+        return parse_json_output(response.content, model_cls=JobRequirementsOutput)
 
     try:
         return execute_with_retry(_call)
     except Exception as e:
         print(f"Error in extract_requirements tool: {e}")
         # Safe fallback structure
-        return {
-            "title": "Software Engineer",
-            "must_have_skills": [],
-            "nice_to_have_skills": [],
-            "min_experience_years": 0,
-            "education_level": "Not Specified",
-            "other_constraints": [],
-        }
+        return JobRequirementsOutput().model_dump()
 
 
 def compare_candidates(candidate_ids: List[str], shortlist: List[Dict]) -> str:
@@ -184,19 +221,10 @@ Generate 3-5 targeted interview questions."""
             HumanMessage(content=prompt_content),
         ]
         response = llm.invoke(messages)
-        content = response.content.strip()
-
-        # Clean JSON markdown blocks
-        if content.startswith("```"):
-            content = re.sub(r"^```(?:json)?\n", "", content)
-            content = re.sub(r"\n```$", "", content)
-
-        start_idx = content.find("[")
-        end_idx = content.rfind("]")
-        if start_idx != -1 and end_idx != -1:
-            content = content[start_idx : end_idx + 1]
-
-        return json.loads(content)
+        res = parse_json_output(response.content)
+        if isinstance(res, list):
+            return res
+        raise LLMParseError("Expected list of question strings")
 
     try:
         return execute_with_retry(_call)

@@ -10,10 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Created pluggable vector store package (`stores/`) featuring `BaseVectorStore` structural `typing.Protocol` interface (`upsert`, `query`, `get_all`, `count`), `ChromaVectorStore`, and `QdrantVectorStore` stub.
 - Introduced domain exception hierarchy (`EngineError`, `IngestionError`, `RetrievalError`, `LLMParseError`, `VectorStoreError`, `CollectionNotFoundError`) in `exceptions.py` and `stores/exceptions.py`.
 - Created Pydantic V2 output models (`JobRequirementsOutput`, `DeepScreenOutput`) and `parse_json_output()` parsing helper in `tools.py`.
-- Added comprehensive unit test suite in `tests/test_stores.py` testing protocol compliance, vector operations, and upsert idempotency.
-- Created `tests/test_exceptions.py` unit test suite testing domain exception hierarchy and Pydantic V2 LLM contract validation.
+- Introduced Celery background worker module (`tasks.py`) and application instance (`celery_app.py`) for non-blocking asynchronous document ingestion (`async_ingest_directory`) and candidate deep screening (`async_deep_screen_candidate`).
+- Created Docker containerization suite including `Dockerfile` (multi-stage Python 3.12 build), `docker-compose.yml` (orchestrating `redis:7-alpine`, Streamlit web app, and Celery worker services), and `.dockerignore`.
+- Added comprehensive unit test suites in `tests/test_stores.py`, `tests/test_exceptions.py`, `tests/test_routers.py`, and `tests/test_tasks.py`.
 - Implemented BM25 Okapi corpus index caching in `JobMatcher` with MD5 fingerprint hash-invalidation to eliminate per-query O(n) index rebuilds.
-- Created `tests/test_routers.py` unit test suite testing conditional graph routing classification and edge cases.
 
 ### Security
 - Hardened state safety by removing sensitive credentials (`api_key`, `api_url`, `llm_provider`, `llm_model`) from serializable `AgentState` dictionary, passing them securely via graph invocation configuration (`config["configurable"]`).

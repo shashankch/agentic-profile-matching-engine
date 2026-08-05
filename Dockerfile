@@ -1,13 +1,23 @@
-FROM python:3.10-slim as builder
-WORKDIR /app
-COPY pyproject.toml requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+FROM python:3.12-slim
 
-FROM python:3.10-slim
 WORKDIR /app
-COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
-COPY . .
-RUN pip install -e .
-EXPOSE 8501
-ENTRYPOINT ["streamlit", "run", "src/agentic_profile_matching/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy project specification files
+COPY pyproject.toml requirements.txt README.md /app/
+COPY src/ /app/src/
+
+# Install python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -e .
+
+EXPOSE 8501 8000
+
+CMD ["streamlit", "run", "src/agentic_profile_matching/app.py", "--server.address=0.0.0.0", "--server.port=8501"]

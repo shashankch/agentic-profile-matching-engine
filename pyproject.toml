@@ -24,7 +24,9 @@ dependencies = [
     "langchain-openai",
     "python-dotenv",
     "mcp>=1.0.0",
-    "tavily-python>=0.5.0"
+    "tavily-python>=0.5.0",
+    "celery>=5.3.0",
+    "redis>=5.0.0"
 ]
 
 [tool.setuptools.packages.find]

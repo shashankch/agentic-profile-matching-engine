@@ -102,7 +102,7 @@ class IngestionService:
                 "section": ch["section"],
             }
 
-            pipeline.collection.upsert(
+            pipeline.store.upsert(
                 ids=[chunk_id],
                 documents=[ch["content"]],
                 embeddings=[emb],

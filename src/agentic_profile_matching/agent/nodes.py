@@ -199,7 +199,7 @@ def search_resumes_node(state: AgentState, config: Optional[RunnableConfig] = No
         return {"shortlist": [], "errors": errors}
 
 
-def rank_candidates_node(state: AgentState) -> Dict[str, Any]:
+def rank_candidates_node(state: AgentState, config: Optional[RunnableConfig] = None) -> Dict[str, Any]:
     """
     Round 1: Performs coarse scoring, matches core skills, and filters shortlist to Top 10.
     """
@@ -411,7 +411,7 @@ def recommendation_node(state: AgentState, config: Optional[RunnableConfig] = No
     return {"shortlist": shortlist, "current_round": 3, "errors": errors}
 
 
-def generate_report_node(state: AgentState, config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def generate_report_node(state: AgentState, config: Optional[RunnableConfig] = None) -> Dict[str, Any]:
     """
     Compiles candidate records, analysis reports, and interview matrices into a Markdown report.
     """
@@ -430,7 +430,11 @@ def generate_report_node(state: AgentState, config: Optional[Dict[str, Any]] = N
             break
 
     if feedback_instructions:
-        llm = _get_llm(state, config)
+        try:
+            llm = _get_llm(state, config)
+        except Exception as e:
+            print(f"Error building LLM model in generate_report_node: {e}")
+            llm = None
 
         prev_summary = "\n".join(
             f"  {idx + 1}. {c['name']} (Score: {c['score']}/100, Status: {c.get('screening_status', 'Shortlisted')}, Matched Skills: {c.get('matched_skills', [])})"

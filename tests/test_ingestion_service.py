@@ -54,8 +54,8 @@ class TestIngestionService(unittest.TestCase):
         self.assertEqual(result["candidate_name"], "Jane Doe")
         self.assertGreater(result["chunks_ingested"], 0)
 
-        # Verify collection.upsert was called on vector store (idempotent write)
-        self.assertTrue(mock_pipeline.collection.upsert.called)
+        # Verify store.upsert was called on vector store (idempotent write)
+        self.assertTrue(mock_pipeline.store.upsert.called)
 
     def test_ingest_directory_success(self):
         """Test ingesting an entire directory of resume files."""

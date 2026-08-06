@@ -328,6 +328,35 @@ Because MCP is inherently asynchronous (`asyncio`) and LangGraph workflow nodes/
 
 ---
 
+## 5. Background Asynchronous Processing & Containerization
+
+### A. Celery + Redis Task Queue Architecture
+For production deployments requiring non-blocking handling of bulk resume ingestion and compute-intensive candidate deep screening, the engine incorporates an asynchronous task processing layer via **Celery** and **Redis**:
+
+```
++-------------------+        Celery Tasks        +----------------------+
+|  Streamlit App /  |  =======================>  |    Celery Worker     |
+|   MCP Server      |      (Redis Broker)        |     (tasks.py)       |
++-------------------+                            +----------------------+
+          |                                                 |
+          v                                                 v
+  +---------------+                              +----------------------+
+  |  Redis Broker | <==========================> | ChromaDB / Vector    |
+  | (Port 6379)   |     Task State & Result      |      Store DB        |
+  +---------------+          Backend             +----------------------+
+```
+
+- **Tasks Module (`tasks.py`)**: Defines `async_ingest_directory` for background document chunking and vector indexing, and `async_deep_screen_candidate` for parallel LLM candidate audits.
+- **Worker App (`celery_app.py`)**: Celery app instance configured with JSON serialization, 300s task time limits, and task state tracking.
+
+### B. Docker Compose Containerization
+The repository includes a production multi-container setup via `docker-compose.yml`:
+- `redis`: Redis 7 Alpine image on port `6379` providing broker and result storage.
+- `app`: Streamlit web app container built via multi-stage Python 3.12 `Dockerfile` exposing port `8501`.
+- `celery_worker`: Background Celery task worker running `celery -A agentic_profile_matching.celery_app worker`.
+
+---
+
 ## 9. Project Roadmap & Development Standards
 
 - **Implementation Roadmap**: Phased implementation plan, current progress status (tracked with emojis `✅`, `⏳`, `⬜`), and future backlog are maintained in [ROADMAP.md](../ROADMAP.md).

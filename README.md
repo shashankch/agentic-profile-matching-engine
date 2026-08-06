@@ -176,13 +176,14 @@ ruff format .
 
 ### 6. [Docker] Deployment
 
-Build and run the Streamlit application inside a container:
+Build and launch the complete stack (Streamlit Web Dashboard, Redis Broker, and Celery Background Worker) using Docker Compose:
 
 ```bash
-# Build the Docker image
-docker build -t agentic-profile-matching .
+# Launch all services in the background (Redis, Celery Worker, Streamlit UI)
+docker compose up -d
 
-# Run the container (passes your local environment keys)
+# Or build and run a single standalone container
+docker build -t agentic-profile-matching .
 docker run -p 8501:8501 --env-file .env agentic-profile-matching
 ```
 

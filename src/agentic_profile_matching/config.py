@@ -53,6 +53,11 @@ SEARCH_SERVER_PATH = os.getenv(
 )
 MCP_TIMEOUT = float(os.getenv("MCP_TIMEOUT", "30.0"))
 
+# Celery & Redis Async Task Configuration
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
+
 
 def get_llm_model(provider: str, model_name: str, api_key: str, api_url: Optional[str] = None):
     if provider == "Groq":

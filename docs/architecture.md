@@ -268,6 +268,29 @@ The system operates on 100% free or open-source tiers to guarantee zero runtime 
 
 ### C. Rate Limit & Token Usage Management
 To proactively prevent 429 rate limit exceptions and TPM/RPM exhaustion on free API tiers, the engine implements five layers of safeguards:
+
+---
+
+## 8. Structured Logging & Observability Pipeline
+
+To provide production-grade trace correlation, performance monitoring, and log structure, the engine includes a dedicated observability module (`src/agentic_profile_matching/observability.py`):
+
+1. **`JsonFormatter`**: Renders all log messages as single-line, structured JSON objects containing standard fields (`timestamp`, `level`, `logger`, `message`) along with optional trace fields (`event`, `node`, `elapsed_ms`, `exception`).
+2. **`get_logger(name)`**: Configures application loggers with structured formatting, preventing duplicate handler attachments and providing log level filtering (`LOG_LEVEL=INFO`).
+3. **`@trace_node(node_name)` Decorator**: Instruments LangGraph nodes (`extract_requirements`, `search_resumes`, `rank_candidates`, `deep_screen`, `recommendation`, `generate_report`, `adjust_requirements`, `conversational_query`, `parse_input`), measuring execution latency in milliseconds and logging structured `node_start`, `node_end`, and `node_error` events.
+
+```json
+{
+  "timestamp": "2026-08-09 14:50:00,000",
+  "level": "INFO",
+  "logger": "agentic_profile_matching.node.deep_screen",
+  "message": "Completed node execution: deep_screen in 245.5ms",
+  "event": "node_end",
+  "node": "deep_screen",
+  "elapsed_ms": 245.5
+}
+```
+
 1. **Tiered Cascading Pipeline**: 
    - **Round 1 (Coarse Filtering)** is executed 100% locally using Sentence Transformers and BM25 indexing (costing 0 API requests and 0 LLM tokens). This narrows the search space from 100+ resumes down to the Top 10.
    - **Round 2 & 3 (Deep Analysis & Recommendations)** are only executed on the narrowed candidates (Top 10 and Top 5 respectively).

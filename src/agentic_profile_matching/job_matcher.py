@@ -6,7 +6,10 @@ from sentence_transformers import SentenceTransformer
 from rank_bm25 import BM25Okapi
 
 from agentic_profile_matching import config
+from agentic_profile_matching.observability import get_logger
 from agentic_profile_matching.stores import BaseVectorStore, ChromaVectorStore
+
+logger = get_logger("agentic_profile_matching.job_matcher")
 
 
 class JobMatcher:
@@ -29,7 +32,7 @@ class JobMatcher:
 
     def _get_bm25_and_corpus(
         self,
-    ) -> Tuple[BM25Okapi, List[str], List[Dict[str, Any]], List[str]]:
+    ) -> Tuple[Optional[BM25Okapi], List[str], List[Dict[str, Any]], List[str]]:
         all_chunks = self.store.get_all()
         documents = all_chunks.get("documents", []) or []
         metadatas = all_chunks.get("metadatas", []) or []
@@ -38,20 +41,24 @@ class JobMatcher:
         sample_str = "".join(documents[:5]) if documents else ""
         fingerprint = f"{len(documents)}_{hashlib.md5(sample_str.encode()).hexdigest()}"
 
-        if self._cached_fingerprint != fingerprint or self._cached_bm25 is None:
-            tokenized_corpus = [doc.lower().split() for doc in documents] if documents else [["empty"]]
-            self._cached_bm25 = BM25Okapi(tokenized_corpus)
-            self._cached_fingerprint = fingerprint
-            self._cached_documents = documents
-            self._cached_metadatas = metadatas
-            self._cached_ids = ids
+        if self._cached_bm25 is not None and self._cached_fingerprint == fingerprint:
+            return (
+                self._cached_bm25,
+                self._cached_documents,
+                self._cached_metadatas,
+                self._cached_ids,
+            )
 
-        return (
-            self._cached_bm25,
-            self._cached_documents,
-            self._cached_metadatas,
-            self._cached_ids,
-        )
+        tokenized_corpus = [doc.lower().split() for doc in documents]
+        bm25 = BM25Okapi(tokenized_corpus) if tokenized_corpus else None
+
+        self._cached_bm25 = bm25
+        self._cached_fingerprint = fingerprint
+        self._cached_documents = documents
+        self._cached_metadatas = metadatas
+        self._cached_ids = ids
+
+        return bm25, documents, metadatas, ids
 
     def match(
         self,
@@ -60,15 +67,9 @@ class JobMatcher:
         min_exp: Optional[int] = None,
         must_have_skills: Optional[List[str]] = None,
         apply_filters: bool = True,
-    ) -> Dict:
-        # Auto-detect minimum experience years from JD if not explicitly provided
+    ) -> Dict[str, Any]:
+        exp_matches = re.findall(r"(\d+)\+?\s*(?:years?|yrs?)\b", job_description, re.IGNORECASE)
         if min_exp is None:
-            exp_matches = re.findall(
-                r"(\d+)\+?\s*(?:years?|yrs?)(?:\s*(?:of)?\s*(?:experience|exp))?",
-                job_description,
-                re.I,
-            )
-            # Find the minimum mentioned years of experience, or default to 0
             parsed_exps = []
             for x in exp_matches:
                 try:
@@ -76,15 +77,15 @@ class JobMatcher:
                 except ValueError:
                     pass
             min_exp = min(parsed_exps) if parsed_exps else 0
-            print(f"Auto-detected experience requirement from JD: {min_exp}+ years")
+            logger.info(f"Auto-detected experience requirement from JD: {min_exp}+ years")
         else:
-            print(f"Using explicit experience requirement: {min_exp}+ years")
+            logger.info(f"Using explicit experience requirement: {min_exp}+ years")
 
         if must_have_skills is None:
             must_have_skills = []
-            print("No explicit must-have skills filter applied.")
+            logger.info("No explicit must-have skills filter applied.")
         else:
-            print(f"Applying must-have skills filter: {must_have_skills}")
+            logger.info(f"Applying must-have skills filter: {must_have_skills}")
 
         # Fetch cached BM25 index and corpus data
         bm25, documents, metadatas, ids = self._get_bm25_and_corpus()

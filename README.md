@@ -23,6 +23,7 @@ Detailed design diagrams, specifications, and requirements can be found in the [
 ## Core Features & Architecture
 
 - **LangGraph Agent Workflow**: Orchestrates requirements extraction, coarse search, deep profile diagnostics, hiring recommendations, and human feedback loops.
+- **Production Observability & Node Tracing**: Structured JSON logging (`JsonFormatter`, `get_logger`) and `@trace_node` decorator instrumenting all 9 graph nodes with millisecond-level execution duration tracking (`node_start`, `node_end`, `node_error`).
 - **[Model Context Protocol (MCP)][mcp] Dual-Mode Gateway**: Supports running direct local modules (Local Mode) or interfacing via stdio JSON-RPC 2.0 with separate MCP servers (MCP Mode) to handle file processes, directory-watching ingestions, and background thread-pool batch files parsing.
 - **Protocol-Enabled Search Engine**: Features a dedicated search MCP server supporting:
   - Live web searching via Tavily API (with fallback mock profiles for fictitious sandbox resumes).
@@ -45,6 +46,7 @@ agentic_profile_matching/
 │   └── agentic_profile_matching/  # Packaged Module Namespace
 │       ├── __init__.py            # Package initialization marker
 │       ├── config.py              # Ingestion paths and model configurations
+│       ├── observability.py       # JsonFormatter, get_logger, and @trace_node instrumentation
 │       ├── fs_tools.py            # Replicated filesystem utility layer
 │       ├── fs_client.py           # Unified client gateway (Direct vs. MCP Mode)
 │       ├── filesystem_mcp_server.py # MCP Protocol server exposing FS tools
@@ -69,6 +71,7 @@ agentic_profile_matching/
 │   ├── test_ingestion_service.py  # Unit tests for IngestionService layer
 │   ├── test_job_matcher.py        # Unit tests for job matching algorithm
 │   ├── test_tools.py              # Unit tests for assessment tools
+│   ├── test_observability.py      # Unit tests for structured logging and trace decorator
 │   └── test_mcp.py                # Unit tests for MCP server/client & fallbacks
 ├── docs/
 │   ├── architecture.md            # Detailed technical design specifications

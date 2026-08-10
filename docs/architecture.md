@@ -278,6 +278,10 @@ To provide production-grade trace correlation, performance monitoring, and log s
 1. **`JsonFormatter`**: Renders all log messages as single-line, structured JSON objects containing standard fields (`timestamp`, `level`, `logger`, `message`) along with optional trace fields (`event`, `node`, `elapsed_ms`, `exception`).
 2. **`get_logger(name)`**: Configures application loggers with structured formatting, preventing duplicate handler attachments and providing log level filtering (`LOG_LEVEL=INFO`).
 3. **`@trace_node(node_name)` Decorator**: Instruments LangGraph nodes (`extract_requirements`, `search_resumes`, `rank_candidates`, `deep_screen`, `recommendation`, `generate_report`, `adjust_requirements`, `conversational_query`, `parse_input`), measuring execution latency in milliseconds and logging structured `node_start`, `node_end`, and `node_error` events.
+4. **Pluggable Tracing Backends**: Supports opt-in integration via `OBSERVABILITY_BACKEND` environment configuration:
+   - **`none`** (default): Standard structured JSON logging to `stdout`.
+   - **`langfuse`**: Dynamically decorates node execution via `@observe(name=node_name)`, exporting traces to Langfuse Cloud/self-hosted instances without modifying graph node code.
+   - **`opentelemetry`**: Wraps node execution in an OpenTelemetry span (`tracer.start_as_current_span(node_name)`), recording node metrics and latency attributes.
 
 ```json
 {
@@ -290,6 +294,7 @@ To provide production-grade trace correlation, performance monitoring, and log s
   "elapsed_ms": 245.5
 }
 ```
+
 
 1. **Tiered Cascading Pipeline**: 
    - **Round 1 (Coarse Filtering)** is executed 100% locally using Sentence Transformers and BM25 indexing (costing 0 API requests and 0 LLM tokens). This narrows the search space from 100+ resumes down to the Top 10.

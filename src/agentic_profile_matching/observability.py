@@ -1,8 +1,9 @@
+import functools
 import json
 import logging
+import os
 import time
-import functools
-from typing import Callable, Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 # Base logger setup
 LOG_FORMAT = "json"  # Default log format
@@ -60,6 +61,7 @@ def trace_node(node_name: str) -> Callable:
     """
     Decorator for tracking LangGraph node execution latency, inputs, and outputs.
     Logs structured node_start and node_end events with elapsed_ms duration.
+    Supports opt-in tracing integration via Langfuse or OpenTelemetry backends.
     """
 
     def decorator(func: Callable) -> Callable:
@@ -73,11 +75,48 @@ def trace_node(node_name: str) -> Callable:
                 extra={"event": "node_start", "node": node_name},
             )
 
-            try:
+            # Check configured tracing backend
+            backend = os.getenv("OBSERVABILITY_BACKEND", "none").lower()
+
+            def _run_func() -> Any:
                 if config is not None:
-                    result = func(state, config, *args, **kwargs)
+                    return func(state, config, *args, **kwargs)
+                return func(state, *args, **kwargs)
+
+            try:
+                if backend == "opentelemetry":
+                    try:
+                        from opentelemetry import trace
+
+                        tracer = trace.get_tracer("agentic_profile_matching")
+                        with tracer.start_as_current_span(node_name) as span:
+                            if span.is_recording():
+                                span.set_attribute("node.name", node_name)
+                            result = _run_func()
+                            elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
+                            if span.is_recording():
+                                span.set_attribute("elapsed_ms", elapsed_ms)
+                    except ImportError:
+                        node_logger.warning(
+                            "OBSERVABILITY_BACKEND set to 'opentelemetry', but opentelemetry SDK is not installed. Falling back to default JSON logging."
+                        )
+                        result = _run_func()
+                elif backend == "langfuse":
+                    try:
+                        from langfuse.decorators import observe
+
+                        @observe(name=node_name)
+                        def _observed_execution():
+                            return _run_func()
+
+                        result = _observed_execution()
+                    except ImportError:
+                        node_logger.warning(
+                            "OBSERVABILITY_BACKEND set to 'langfuse', but langfuse SDK is not installed. Falling back to default JSON logging."
+                        )
+                        result = _run_func()
                 else:
-                    result = func(state, *args, **kwargs)
+                    result = _run_func()
 
                 elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
                 node_logger.info(

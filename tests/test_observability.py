@@ -1,5 +1,6 @@
 import json
 import logging
+import sys
 from agentic_profile_matching.observability import JsonFormatter, get_logger, trace_node
 
 
@@ -74,3 +75,38 @@ def test_trace_node_decorator_exception(caplog):
 
     messages = [r.getMessage() for r in caplog.records]
     assert any("Failed node execution: failing_node" in m for m in messages)
+
+
+def test_trace_node_langfuse_backend(monkeypatch):
+    monkeypatch.setenv("OBSERVABILITY_BACKEND", "langfuse")
+
+    @trace_node("langfuse_node")
+    def langfuse_node_func(state):
+        return {"langfuse_processed": True}
+
+    result = langfuse_node_func({"key": "value"})
+    assert result["langfuse_processed"] is True
+
+
+def test_trace_node_opentelemetry_backend(monkeypatch):
+    monkeypatch.setenv("OBSERVABILITY_BACKEND", "opentelemetry")
+
+    @trace_node("otel_node")
+    def otel_node_func(state):
+        return {"otel_processed": True}
+
+    result = otel_node_func({"key": "value"})
+    assert result["otel_processed"] is True
+
+
+def test_trace_node_import_error_fallback(monkeypatch, caplog):
+    caplog.set_level(logging.WARNING)
+    monkeypatch.setenv("OBSERVABILITY_BACKEND", "opentelemetry")
+    monkeypatch.setattr("sys.modules", {**dict(sys.modules), "opentelemetry": None})
+
+    @trace_node("fallback_node")
+    def fallback_node_func(state):
+        return {"fallback_processed": True}
+
+    result = fallback_node_func({"key": "value"})
+    assert result["fallback_processed"] is True

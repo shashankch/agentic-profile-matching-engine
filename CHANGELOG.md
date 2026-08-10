@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2] - 2026-08-10
+### Added
+- Extended `@trace_node` in `observability.py` with opt-in tracing integration for **Langfuse** (`OBSERVABILITY_BACKEND=langfuse`) and **OpenTelemetry** (`OBSERVABILITY_BACKEND=opentelemetry`).
+- Added tracing configuration parameters (`OBSERVABILITY_BACKEND`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_HOST`, `OTEL_EXPORTER_OTLP_ENDPOINT`) to `config.py`.
+- Created `.env.example` template documenting all local environment variables and optional observability backend settings.
+- Added unit tests in `tests/test_observability.py` verifying graceful fallback when optional tracing SDKs are uninstalled or unconfigured.
+
 ## [0.9.1] - 2026-08-09
 ### Added
 - Created structured observability module (`src/agentic_profile_matching/observability.py`) containing `JsonFormatter`, `get_logger()`, and `@trace_node()` decorator for millisecond latency instrumentation and JSON event logging (`node_start`, `node_end`, `node_error`).

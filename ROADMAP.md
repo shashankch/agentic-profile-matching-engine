@@ -46,7 +46,8 @@ This document outlines the phased plan for building the Agentic Profile Matching
 9. **Phase 9: Production Observability, RAG Evaluation & Richer Ingestion** ⏳
    - **9.1 — Structured Logging & Node Tracing Decorator** ✅: Introduce structured JSON logging (`JsonFormatter`, `get_logger`) and a `@trace_node` decorator with per-node latency timing and trace event correlation; replace diagnostic `print()` calls throughout.
 
-   - **9.2 — Langfuse / Arize Phoenix Tracing Integration** ⬜: Integrate **[Langfuse]** or **[Arize Phoenix]** as an opt-in tracing backend wired through the `@trace_node` decorator with zero changes to node logic.
+   - **9.2 — Langfuse / OpenTelemetry Tracing Integration** ✅: Integrate **[Langfuse]** and **[OpenTelemetry]** as opt-in tracing backends wired dynamically through the `@trace_node` decorator with zero changes to node logic.
+
    - **9.3 — Ragas / DeepEval RAG Evaluation Pipeline** ⬜: Incorporate **[Ragas]** or **[DeepEval]** automated evaluation pipelines measuring chunk retrieval recall, response faithfulness, and answer relevance.
    - **9.4 — PyMuPDF / Unstructured.io Ingestion Upgrade** ⬜: Upgrade document ingestion using **[PyMuPDF]** or **[Unstructured.io]** for richer PDF layout parsing, plugged cleanly through the `IngestionService` boundary.
 

@@ -76,7 +76,29 @@ This document defines the architectural guidelines, code quality standards, and 
 1. **Conventional Commits**
    - Format: `<type>(<scope>): <short summary>`
    - Allowed Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `ci`.
-   - Example: `feat(ingestion): Phase 8.1 - IngestionService Layer (v0.4.0)`
+   - Example: `feat(observability): Phase 9.1 - Structured JSON Logging & Node Tracing (v0.9.1)`
 
-2. **Semantic Versioning**
+2. **Semantic Versioning & Incremental Changelogs**
    - Follow `MAJOR.MINOR.PATCH` versioning tracked in `pyproject.toml` and documented chronologically in `CHANGELOG.md`.
+   - Every subphase PR MUST increment the version in `pyproject.toml` and `CHANGELOG.md` with an explicit version section (e.g. `[0.8.2]`, `[0.8.3]`, `[0.9.1]`) and release date.
+
+---
+
+## 📊 7. Observability & Logging Standards
+
+1. **Structured JSON Logging**
+   - Use `get_logger(name)` from `agentic_profile_matching.observability`.
+   - Unformatted bare `print()` calls in production modules (`nodes.py`, `job_matcher.py`, `resume_rag.py`, `services/`) are strictly prohibited.
+   - All log records are output as single-line JSON objects with standard (`timestamp`, `level`, `logger`, `message`) and trace payload attributes (`event`, `node`, `elapsed_ms`).
+
+2. **Node Latency Instrumentation**
+   - All 9 LangGraph agent workflow nodes (`parse_input`, `extract_requirements`, `search_resumes`, `rank_candidates`, `deep_screen`, `recommendation`, `generate_report`, `adjust_requirements`, `conversational_query`) MUST be decorated with `@trace_node(node_name)`.
+
+---
+
+## 📚 8. Pre-PR Documentation Audit Protocol
+
+Before submitting a Pull Request for ANY subphase:
+1. **Quality Gate**: `ruff check src/ tests/`, `ruff format --check src/ tests/`, and `pytest tests/ -v` MUST pass with zero errors.
+2. **CHANGELOG Sync**: `CHANGELOG.md` MUST record all added, changed, fixed, or security items under a new version tag (`[X.Y.Z] - YYYY-MM-DD`).
+3. **README Sync**: `README.md` features overview, project directory tree, and setup commands MUST be updated to reflect all newly added modules, tools, and test suites.

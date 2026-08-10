@@ -107,6 +107,7 @@ Please review our [Engineering Conventions](CONVENTIONS.md) (`CONVENTIONS.md`) b
 Key expectations:
 - **Clean Separation**: Keep domain logic decoupled from UI/RPC handlers.
 - **Explicit Types**: Use type annotations for all function interfaces.
+- **Structured Logging**: Use `get_logger()` and `@trace_node` for observability; avoid unformatted `print()` calls.
 - **Error Bounds**: Avoid swallowing exceptions without logging or setting state warning flags.
 - **Modular Commits**: Use [Conventional Commits](https://www.conventionalcommits.org/) for your commit messages:
   - `feat(component): add new feature`
@@ -126,8 +127,11 @@ Key expectations:
 2. **Commit Your Changes**
    Follow Conventional Commits style.
 3. **Verify Lints & Tests**
-   Ensure `pytest` passes and `ruff check .` shows zero warnings.
-4. **Push & Open PR**
-   Push to your fork/branch and open a PR against the `main` branch with a clear description of the problem solved, architectural considerations, and testing steps verified.
+   Ensure `pytest tests/ -v` passes and `ruff check src/ tests/` shows zero warnings.
+4. **Update Version & Documentation**
+   - Increment version in `pyproject.toml` and add release notes to `CHANGELOG.md`.
+   - Verify `README.md` features, directory tree, and setup instructions match latest implementation.
+5. **Push & Open PR**
+   Push to your branch and open a PR against the `main` branch with a clear description of changes.
 
 Thank you for contributing! 🌟

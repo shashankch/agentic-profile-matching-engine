@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentic_profile_matching"
-version = "0.5.0"
+version = "0.9.1"
 description = "Production-grade Agentic Profile Matching Engine"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -34,7 +34,7 @@ where = ["src"]
 include = ["agentic_profile_matching*"]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py312"
 line-length = 120
 extend-exclude = ["docs", "*.md"]
 

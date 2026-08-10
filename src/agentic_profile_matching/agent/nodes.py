@@ -9,6 +9,7 @@ from langchain_core.runnables import RunnableConfig
 
 from agentic_profile_matching.mcp_client import mcp_client
 
+from agentic_profile_matching.observability import get_logger, trace_node
 from agentic_profile_matching import config as app_config
 from agentic_profile_matching.fs_client import read_file
 from agentic_profile_matching.job_matcher import JobMatcher
@@ -30,6 +31,8 @@ from agentic_profile_matching.agent.prompts import (
     CONVERSATIONAL_QUERY_SYSTEM_PROMPT,
 )
 from agentic_profile_matching.stores import BaseVectorStore
+
+logger = get_logger("agentic_profile_matching.agent.nodes")
 
 
 def _get_llm(state: AgentState, config: Optional[RunnableConfig] = None):
@@ -89,6 +92,7 @@ def _get_store(config: Optional[RunnableConfig] = None) -> Optional[BaseVectorSt
     return None
 
 
+@trace_node("parse_input")
 def parse_input_node(state: AgentState, config: Optional[RunnableConfig] = None) -> Dict[str, Any]:
     """
     Inspects and prepares state metadata prior to conditional graph routing.
@@ -107,6 +111,7 @@ def parse_input_node(state: AgentState, config: Optional[RunnableConfig] = None)
     }
 
 
+@trace_node("extract_requirements")
 def extract_requirements_node(state: AgentState, config: Optional[RunnableConfig] = None) -> Dict[str, Any]:
     """
     LLM extracts structured job requirements from raw input message content.
@@ -134,7 +139,7 @@ def extract_requirements_node(state: AgentState, config: Optional[RunnableConfig
         # Dynamic LLM builder with injection support
         llm = _get_llm(state, config)
 
-        print("Extracting job requirements from input...")
+        logger.info("Extracting job requirements from input...")
         requirements = extract_requirements(last_msg, llm)
         if not isinstance(requirements, dict):
             requirements = fallback_reqs
@@ -142,11 +147,12 @@ def extract_requirements_node(state: AgentState, config: Optional[RunnableConfig
 
         return {"requirements": requirements, "current_round": 1, "errors": errors}
     except Exception as e:
-        print(f"Error in extract_requirements_node: {e}")
+        logger.error(f"Error in extract_requirements_node: {e}")
         errors.append(f"Requirements extraction failed: {str(e)}. Using fallback requirements.")
         return {"requirements": fallback_reqs, "current_round": 1, "errors": errors}
 
 
+@trace_node("search_resumes")
 def search_resumes_node(state: AgentState, config: Optional[RunnableConfig] = None) -> Dict[str, Any]:
     """
     Retrieves candidate resumes matching constraints using local hybrid search.
@@ -169,7 +175,7 @@ def search_resumes_node(state: AgentState, config: Optional[RunnableConfig] = No
         matcher = JobMatcher(store=store)
 
         query_text = f"Job Title: {title}. Must-Have Skills: {', '.join(must_have)}. Experience: {min_exp} years."
-        print(f"Retrieving candidate resumes for requirements: {requirements}")
+        logger.info(f"Retrieving candidate resumes for requirements: {requirements}")
 
         # Try strict filtering first
         results = matcher.match(
@@ -182,7 +188,7 @@ def search_resumes_node(state: AgentState, config: Optional[RunnableConfig] = No
 
         # Fallback to no strict filtering if zero matches exist
         if not results or not results.get("top_matches"):
-            print("Zero candidates satisfied strict criteria. Relaxing filters...")
+            logger.info("Zero candidates satisfied strict criteria. Relaxing filters...")
             results = matcher.match(
                 job_description=query_text,
                 k=retrieval_k,
@@ -194,11 +200,12 @@ def search_resumes_node(state: AgentState, config: Optional[RunnableConfig] = No
         raw_matches = results.get("top_matches", []) if results else []
         return {"shortlist": raw_matches, "errors": errors}
     except Exception as e:
-        print(f"Error in search_resumes_node: {e}")
+        logger.error(f"Error in search_resumes_node: {e}")
         errors.append(f"Resume search failed: {str(e)}. RAG retrieval skipped.")
         return {"shortlist": [], "errors": errors}
 
 
+@trace_node("rank_candidates")
 def rank_candidates_node(state: AgentState, config: Optional[RunnableConfig] = None) -> Dict[str, Any]:
     """
     Round 1: Performs coarse scoring, matches core skills, and filters shortlist to Top 10.
@@ -251,11 +258,12 @@ def rank_candidates_node(state: AgentState, config: Optional[RunnableConfig] = N
             "errors": errors,
         }
     except Exception as e:
-        print(f"Error in rank_candidates_node: {e}")
+        logger.error(f"Error in rank_candidates_node: {e}")
         errors.append(f"Ranking failed: {str(e)}")
         return {"shortlist": [], "current_round": 1, "errors": errors}
 
 
+@trace_node("deep_screen")
 def deep_screen_node(state: AgentState, config: Optional[RunnableConfig] = None) -> Dict[str, Any]:
     """
     Round 2: profile deep text audit.
@@ -270,21 +278,21 @@ def deep_screen_node(state: AgentState, config: Optional[RunnableConfig] = None)
     try:
         llm = _get_llm(state, config)
     except Exception as e:
-        print(f"Error building LLM model in deep_screen_node: {e}")
+        logger.error(f"Error building LLM model in deep_screen_node: {e}")
         errors.append(f"Failed to build LLM for deep screening: {str(e)}")
         llm = None
 
     deep_limit = state.get("deep_screen_limit") or app_config.DEFAULT_DEEP_LIMIT
     # Screen candidates dynamically based on deep_limit
     candidates_to_screen = shortlist[: int(deep_limit)]
-    print(f"Executing Round 2 (Deep Screening) on top {len(candidates_to_screen)} candidates...")
+    logger.info(f"Executing Round 2 (Deep Screening) on top {len(candidates_to_screen)} candidates...")
 
     for idx, c in enumerate(candidates_to_screen):
         # Read full resume text from file
         res = read_file(c["candidate_id"])
         if not res or not res.get("success"):
             err_msg = f"Incomplete parsing: could not read resume for {c.get('name')} ({res.get('error') if res else 'Empty response'})"
-            print(err_msg)
+            logger.warning(err_msg)
             errors.append(err_msg)
             c["strengths"] = ["Strong skill overlap based on RAG indexing"]
             c["gaps"] = ["Could not audit text (file unreadable / unparsed)"]
@@ -335,7 +343,7 @@ Candidate Resume Text:
             c["screening_reasoning"] = result.get("screening_reasoning", "")
         except Exception as e:
             err_msg = f"Failed to screen {c['name']}: {e}"
-            print(err_msg)
+            logger.error(err_msg)
             errors.append(err_msg)
             c["strengths"] = ["Semantic match based on vector DB indexing"]
             c["gaps"] = ["Skipped deep screening audit due to LLM error"]
@@ -346,6 +354,7 @@ Candidate Resume Text:
     return {"shortlist": shortlist, "current_round": 2, "errors": errors}
 
 
+@trace_node("recommendation")
 def recommendation_node(state: AgentState, config: Optional[RunnableConfig] = None) -> Dict[str, Any]:
     """
     Round 3: Final Hiring decisions & customized technical screening questions generator.
@@ -359,14 +368,14 @@ def recommendation_node(state: AgentState, config: Optional[RunnableConfig] = No
     try:
         llm = _get_llm(state, config)
     except Exception as e:
-        print(f"Error building LLM model in recommendation_node: {e}")
+        logger.error(f"Error building LLM model in recommendation_node: {e}")
         errors.append(f"Failed to build LLM for interview question generation: {str(e)}")
         llm = None
 
     rec_limit = state.get("recommendation_limit") or app_config.DEFAULT_RECOMMENDATION_LIMIT
     # Generate questions and recommendations dynamically based on rec_limit
     candidates_to_decide = shortlist[: int(rec_limit)]
-    print(f"Executing Round 3 (Hire Decision & QGen) for top {len(candidates_to_decide)} candidates...")
+    logger.info(f"Executing Round 3 (Hire Decision & QGen) for top {len(candidates_to_decide)} candidates...")
 
     for idx, c in enumerate(candidates_to_decide):
         if idx > 0:
@@ -387,7 +396,7 @@ def recommendation_node(state: AgentState, config: Optional[RunnableConfig] = No
                 raise ValueError("LLM not configured.")
         except Exception as e:
             err_msg = f"Failed to generate interview questions for {c.get('name')}: {str(e)}"
-            print(err_msg)
+            logger.error(err_msg)
             errors.append(err_msg)
             c["interview_questions"] = [
                 "Can you walk me through your engineering experience?",
@@ -411,6 +420,7 @@ def recommendation_node(state: AgentState, config: Optional[RunnableConfig] = No
     return {"shortlist": shortlist, "current_round": 3, "errors": errors}
 
 
+@trace_node("generate_report")
 def generate_report_node(state: AgentState, config: Optional[RunnableConfig] = None) -> Dict[str, Any]:
     """
     Compiles candidate records, analysis reports, and interview matrices into a Markdown report.
@@ -433,7 +443,7 @@ def generate_report_node(state: AgentState, config: Optional[RunnableConfig] = N
         try:
             llm = _get_llm(state, config)
         except Exception as e:
-            print(f"Error building LLM model in generate_report_node: {e}")
+            logger.error(f"Error building LLM model in generate_report_node: {e}")
             llm = None
 
         prev_summary = "\n".join(
@@ -463,7 +473,7 @@ def generate_report_node(state: AgentState, config: Optional[RunnableConfig] = N
             if llm is not None:
                 ranking_explanation = execute_with_retry(_call_explanation)
         except Exception as e:
-            print(f"Warning: Failed to generate ranking explanation via LLM: {e}")
+            logger.warning(f"Failed to generate ranking explanation via LLM: {e}")
 
     rec_limit = state.get("recommendation_limit") or app_config.DEFAULT_RECOMMENDATION_LIMIT
     deep_limit = state.get("deep_screen_limit") or app_config.DEFAULT_DEEP_LIMIT
@@ -590,6 +600,7 @@ def generate_report_node(state: AgentState, config: Optional[RunnableConfig] = N
     }
 
 
+@trace_node("adjust_requirements")
 def adjust_requirements_node(state: AgentState, config: Optional[RunnableConfig] = None) -> Dict[str, Any]:
     """
     Conversational feedback loop: refines requirements constraints using user instructions.
@@ -603,7 +614,7 @@ def adjust_requirements_node(state: AgentState, config: Optional[RunnableConfig]
 
     llm = _get_llm(state, config)
 
-    print(f"Refining job requirements based on feedback: '{last_msg}'")
+    logger.info(f"Refining job requirements based on feedback: '{last_msg}'")
 
     system_prompt = ADJUST_REQUIREMENTS_SYSTEM_PROMPT.format(current_reqs_json=json.dumps(current_reqs, indent=2))
 
@@ -617,10 +628,10 @@ def adjust_requirements_node(state: AgentState, config: Optional[RunnableConfig]
 
     try:
         updated_reqs = execute_with_retry(_call_adjust)
-        print(f"Updated requirements: {updated_reqs}")
+        logger.info(f"Updated requirements: {updated_reqs}")
         return {"requirements": updated_reqs, "current_round": 1}
     except Exception as e:
-        print(f"Failed to adjust requirements: {e}")
+        logger.error(f"Failed to adjust requirements: {e}")
         return {}
 
 
@@ -646,6 +657,7 @@ def fetch_candidate_notes_tool(candidate_name: str) -> str:
     return str(res)
 
 
+@trace_node("conversational_query")
 def conversational_query_node(state: AgentState, config: Optional[RunnableConfig] = None) -> Dict[str, Any]:
     """
     Directly answers conversational questions from the recruiter (e.g. comparison queries, rankings explanation)
@@ -661,7 +673,7 @@ def conversational_query_node(state: AgentState, config: Optional[RunnableConfig
 
     llm = _get_llm(state, config)
 
-    print(f"Executing Conversational Query with search tools: '{last_msg}'")
+    logger.info(f"Executing Conversational Query with search tools: '{last_msg}'")
 
     tools = [search_web_tool, fetch_candidate_notes_tool]
     llm_with_tools = llm.bind_tools(tools)
@@ -700,7 +712,7 @@ def conversational_query_node(state: AgentState, config: Optional[RunnableConfig
                 tool_name = tool_call["name"]
                 args = tool_call["args"]
 
-                print(f"Agent requested tool call: {tool_name} with args {args}")
+                logger.info(f"Agent requested tool call: {tool_name} with args {args}")
 
                 if tool_name == "search_web_tool":
                     result = search_web_tool.invoke(args)
@@ -716,6 +728,6 @@ def conversational_query_node(state: AgentState, config: Optional[RunnableConfig
         ai_msg = AIMessage(content=local_messages[-1].content)
         return {"messages": messages + [ai_msg]}
     except Exception as e:
-        print(f"Failed to execute conversational query: {e}")
+        logger.error(f"Failed to execute conversational query: {e}")
         err_msg = AIMessage(content=f"I encountered an error trying to analyze that: {str(e)}")
         return {"messages": messages + [err_msg]}

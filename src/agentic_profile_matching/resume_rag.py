@@ -4,8 +4,11 @@ from typing import Dict, List, Optional
 from sentence_transformers import SentenceTransformer
 
 from agentic_profile_matching import config
+from agentic_profile_matching.observability import get_logger
 from agentic_profile_matching.fs_client import list_files, read_file
 from agentic_profile_matching.stores import BaseVectorStore, ChromaVectorStore
+
+logger = get_logger("agentic_profile_matching.resume_rag")
 
 SECTION_HEADERS = [
     "EXPERIENCE",
@@ -274,6 +277,6 @@ if __name__ == "__main__":
 
     pipeline = ResumeRAGPipeline()
     directory = sys.argv[1] if len(sys.argv) > 1 else config.RESUMES_DIR
-    print(f"Ingesting resumes from directory: {directory}")
+    logger.info(f"Ingesting resumes from directory: {directory}")
     pipeline.ingest_directory(directory)
-    print("Ingestion complete.")
+    logger.info("Ingestion complete.")

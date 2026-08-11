@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.3] - 2026-08-11
+### Added
+- Created ground-truth RAG evaluation benchmark dataset (`data/eval_scenarios.json`) defining test scenarios, required skills, experience bounds, and expected candidate ranking recall metrics.
+- Introduced RAG evaluation test suite package (`tests/eval/__init__.py`) with custom pytest `@pytest.mark.eval` marker.
+- Added hybrid search Retrieval Recall@K (e.g. Recall@10) and Mean Reciprocal Rank (MRR) metrics evaluation in `tests/eval/test_retrieval_recall.py`.
+- Added candidate screening report faithfulness and groundedness evaluation suite in `tests/eval/test_response_faithfulness.py`.
+
 ## [0.9.2] - 2026-08-10
 ### Added
 - Extended `@trace_node` in `observability.py` with opt-in tracing integration for **Langfuse** (`OBSERVABILITY_BACKEND=langfuse`) and **OpenTelemetry** (`OBSERVABILITY_BACKEND=opentelemetry`).

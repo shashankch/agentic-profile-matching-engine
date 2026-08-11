@@ -23,7 +23,8 @@ Detailed design diagrams, specifications, and requirements can be found in the [
 ## Core Features & Architecture
 
 - **LangGraph Agent Workflow**: Orchestrates requirements extraction, coarse search, deep profile diagnostics, hiring recommendations, and human feedback loops.
-- **Production Observability & Node Tracing**: Structured JSON logging (`JsonFormatter`, `get_logger`) and `@trace_node` decorator instrumenting all 9 graph nodes with millisecond-level execution duration tracking (`node_start`, `node_end`, `node_error`).
+- **Production Observability & Node Tracing**: Structured JSON logging (`JsonFormatter`, `get_logger`) and `@trace_node` decorator instrumenting all 9 graph nodes with millisecond-level execution duration tracking (`node_start`, `node_end`, `node_error`) plus opt-in **Langfuse** and **OpenTelemetry** tracing.
+- **RAG Evaluation Pipeline**: Benchmark evaluation suite measuring hybrid retrieval Recall@K, Mean Reciprocal Rank (MRR), and screening report faithfulness against ground-truth evaluation scenarios (`data/eval_scenarios.json`).
 - **[Model Context Protocol (MCP)][mcp] Dual-Mode Gateway**: Supports running direct local modules (Local Mode) or interfacing via stdio JSON-RPC 2.0 with separate MCP servers (MCP Mode) to handle file processes, directory-watching ingestions, and background thread-pool batch files parsing.
 - **Protocol-Enabled Search Engine**: Features a dedicated search MCP server supporting:
   - Live web searching via Tavily API (with fallback mock profiles for fictitious sandbox resumes).
@@ -42,6 +43,8 @@ Detailed design diagrams, specifications, and requirements can be found in the [
 
 ```text
 agentic_profile_matching/
+├── data/
+│   └── eval_scenarios.json        # Ground-truth evaluation scenarios benchmark dataset
 ├── src/
 │   └── agentic_profile_matching/  # Packaged Module Namespace
 │       ├── __init__.py            # Package initialization marker
@@ -65,8 +68,12 @@ agentic_profile_matching/
 │       ├── tools.py               # Custom AI tools (compare, extract, qgen)
 │       ├── app.py                 # Interactive Streamlit GUI dashboard app
 │       └── run_scenarios.py       # Automated scenarios runner script
-├── tests/                         # Unit tests directory
+├── tests/                         # Unit & integration tests directory
 │   ├── __init__.py
+│   ├── eval/                      # RAG evaluation pipeline benchmark tests
+│   │   ├── __init__.py
+│   │   ├── test_retrieval_recall.py     # Recall@K and MRR evaluation suite
+│   │   └── test_response_faithfulness.py # Report faithfulness & groundedness tests
 │   ├── test_fs_tools.py           # Unit tests for filesystem utilities
 │   ├── test_ingestion_service.py  # Unit tests for IngestionService layer
 │   ├── test_job_matcher.py        # Unit tests for job matching algorithm
@@ -164,18 +171,22 @@ Or run the automated scenario suite:
 python -m agentic_profile_matching.run_scenarios
 ```
 
-### 5. Running Unit Tests & Quality Checks
+### 5. Running Unit Tests, RAG Evaluation & Quality Checks
 
-Run the test suite to verify code modules, including MCP protocol test scenarios:
+Run the test suite to verify code modules, MCP protocol scenarios, and RAG evaluation benchmarks:
 
 ```bash
-# Run all tests
+# Run standard unit tests
 pytest tests/
 
+# Run RAG Evaluation Pipeline (Recall@K, MRR & Faithfulness)
+pytest tests/eval/ -m eval
+
 # Run Ruff linter and formatter checks
-ruff check .
-ruff format .
+ruff check src/ tests/
+ruff format src/ tests/
 ```
+
 
 ### 6. [Docker] Deployment
 

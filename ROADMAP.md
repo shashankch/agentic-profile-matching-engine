@@ -48,7 +48,8 @@ This document outlines the phased plan for building the Agentic Profile Matching
 
    - **9.2 — Langfuse / OpenTelemetry Tracing Integration** ✅: Integrate **[Langfuse]** and **[OpenTelemetry]** as opt-in tracing backends wired dynamically through the `@trace_node` decorator with zero changes to node logic.
 
-   - **9.3 — Ragas / DeepEval RAG Evaluation Pipeline** ⬜: Incorporate **[Ragas]** or **[DeepEval]** automated evaluation pipelines measuring chunk retrieval recall, response faithfulness, and answer relevance.
+   - **9.3 — RAG Evaluation Pipeline (Recall & Faithfulness)** ✅: Incorporate automated evaluation pipelines (`tests/eval/`) measuring candidate retrieval recall@K, MRR, and LLM screening faithfulness against ground-truth benchmark scenarios (`data/eval_scenarios.json`).
+
    - **9.4 — PyMuPDF / Unstructured.io Ingestion Upgrade** ⬜: Upgrade document ingestion using **[PyMuPDF]** or **[Unstructured.io]** for richer PDF layout parsing, plugged cleanly through the `IngestionService` boundary.
 
 10. **Phase 10: Architecture Documentation & Project Closeout** ⬜

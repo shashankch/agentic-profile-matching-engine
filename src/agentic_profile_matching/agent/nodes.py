@@ -288,22 +288,26 @@ def deep_screen_node(state: AgentState, config: Optional[RunnableConfig] = None)
     logger.info(f"Executing Round 2 (Deep Screening) on top {len(candidates_to_screen)} candidates...")
 
     for idx, c in enumerate(candidates_to_screen):
-        # Read full resume text from file
-        res = read_file(c["candidate_id"])
-        if not res or not res.get("success"):
-            err_msg = f"Incomplete parsing: could not read resume for {c.get('name')} ({res.get('error') if res else 'Empty response'})"
-            logger.warning(err_msg)
-            errors.append(err_msg)
-            c["strengths"] = ["Strong skill overlap based on RAG indexing"]
-            c["gaps"] = ["Could not audit text (file unreadable / unparsed)"]
-            c["improvement_suggestions"] = "Review resume file formatting before interviewing candidate."
-            c["screening_status"] = "Screened"
-            c["screening_reasoning"] = (
-                f"Fallback screening (unreadable file: {res.get('error') if res else 'Unknown error'})"
-            )
-            continue
+        candidate_name = c.get("candidate_name") or c.get("name") or "Unknown Candidate"
+        resume_text = c.get("raw_text")
 
-        resume_text = res["content"]
+        if not resume_text:
+            candidate_id = c.get("candidate_id") or ""
+            res = read_file(candidate_id)
+            if not res or not res.get("success"):
+                err_msg = f"Incomplete parsing: could not read resume for {candidate_name} ({res.get('error') if res else 'Empty response'})"
+                logger.warning(err_msg)
+                errors.append(err_msg)
+                c["strengths"] = ["Strong skill overlap based on RAG indexing"]
+                c["gaps"] = ["Could not audit text (file unreadable / unparsed)"]
+                c["improvement_suggestions"] = "Review resume file formatting before interviewing candidate."
+                c["screening_status"] = "Screened"
+                c["screening_reasoning"] = (
+                    f"Fallback screening (unreadable file: {res.get('error') if res else 'Unknown error'})"
+                )
+                continue
+            resume_text = res["content"]
+
         # Truncate content to avoid model token limits
         if len(resume_text) > app_config.RESUME_TRUNCATION_LIMIT:
             resume_text = resume_text[: app_config.RESUME_TRUNCATION_LIMIT] + "... [truncated]"
@@ -320,7 +324,7 @@ def deep_screen_node(state: AgentState, config: Optional[RunnableConfig] = None)
             c["screening_reasoning"] = "Fallback screening due to unconfigured LLM"
             continue
 
-        prompt_content = f"""Candidate: {c["name"]}
+        prompt_content = f"""Candidate: {candidate_name}
 Job Title: {requirements.get("title", "Software Engineer")}
 Job Requirements: {requirements}
 Candidate Resume Text:
@@ -342,7 +346,7 @@ Candidate Resume Text:
             c["screening_status"] = result.get("screening_status", "Screened")
             c["screening_reasoning"] = result.get("screening_reasoning", "")
         except Exception as e:
-            err_msg = f"Failed to screen {c['name']}: {e}"
+            err_msg = f"Failed to screen {candidate_name}: {e}"
             logger.error(err_msg)
             errors.append(err_msg)
             c["strengths"] = ["Semantic match based on vector DB indexing"]

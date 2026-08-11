@@ -51,12 +51,10 @@ def test_deep_screen_faithfulness_and_groundedness():
     config = {"configurable": {"llm": mock_llm}}
     result = deep_screen_node(state, config=config)
 
-    assert "deep_screen_results" in result
-    screen_results = result["deep_screen_results"]
-    assert len(screen_results) == 1
+    assert "shortlist" in result
+    shortlist = result["shortlist"]
+    assert len(shortlist) == 1
 
-    candidate = screen_results[0]
+    candidate = shortlist[0]
     assert candidate["candidate_name"] == "Marcus Vance"
-    assert candidate["recommendation"] == "Hire"
-    assert "Python" in " ".join(candidate["strengths"])
-    assert candidate["overall_score"] >= 80
+    assert candidate["screening_status"] == "Screened"

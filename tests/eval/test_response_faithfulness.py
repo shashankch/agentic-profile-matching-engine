@@ -45,7 +45,6 @@ def test_deep_screen_faithfulness_and_groundedness():
                 "raw_text": "Marcus Vance is a Senior Python Developer with 6 years experience managing Kubernetes clusters.",
             }
         ],
-
         "messages": [],
     }
 

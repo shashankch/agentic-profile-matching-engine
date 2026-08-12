@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-08-12
+### Added
+- Created formal **Architecture Decision Records (ADRs)** in `docs/ARCHITECTURE_DECISIONS.md` documenting 7 key architectural design choices across all project milestones.
+- Published comprehensive "Engineering Highlights & Architectural Decisions" section in `README.md`.
+- Finalized complete production closeout, updating package `__all__` exports across `stores`, `services`, and `agent` packages.
+
+## [0.9.4] - 2026-08-12
+### Added
+- Upgraded PDF document parsing in `fs_tools.py` using **PyMuPDF** (`fitz`) for superior multi-column layout extraction with text block sorting.
+- Added opt-in support for **Unstructured.io** PDF layout partitioning via `USE_UNSTRUCTURED=True` configuration flag.
+- Added backward-compatible fallbacks to `pypdf` if `PyMuPDF` or `Unstructured` are unavailable.
+- Added unit tests in `tests/test_fs_tools.py` verifying PyMuPDF layout parsing and Unstructured opt-in configuration.
+
 ## [0.9.3] - 2026-08-11
 ### Added
 - Created ground-truth RAG evaluation benchmark dataset (`data/eval_scenarios.json`) defining test scenarios, required skills, experience bounds, and expected candidate ranking recall metrics.

@@ -14,7 +14,7 @@ The agent coordinates these layers through an **LLM-driven state machine** using
 
 ```mermaid
 graph LR
-    User[Recruiter/User] <--> UX[Conversational CLI / Streamlit Interface]
+    User[End User] <--> UX[Conversational CLI / Streamlit Interface]
     UX <--> Agent[LangGraph Agentic Loop]
     subgraph Tooling Layer
         Agent --> FS[Milestone 1: File System Tools]
@@ -104,13 +104,33 @@ graph TD;
 	generate_report --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
-	classDef last fill:#bfb6fc
+## 2. Agent Workflow & LangGraph State Machine
+
+The agent orchestrates candidate screening through a **9-node LangGraph StateGraph**.
+
+```mermaid
+graph TD
+    START([Start / User Input]) --> parse_input[parse_input_node]
+    
+    parse_input -- Raw Job Description --> extract_req[extract_requirements_node]
+    parse_input -- Conversational Query --> conv_query[conversational_query_node]
+    parse_input -- Requirement Adjustments --> adjust_req[adjust_requirements_node]
+    
+    extract_req --> search_resumes[search_resumes_node]
+    adjust_req --> search_resumes
+    
+    search_resumes --> rank_candidates[rank_candidates_node]
+    rank_candidates --> deep_screen[deep_screen_node]
+    deep_screen --> recommend[recommendation_node]
+    recommend --> gen_report[generate_report_node]
+    
+    gen_report --> END([End / Recruiter View])
+    conv_query --> END
 ```
 
-### C. Graph Nodes & Logic Specification
+### Node Specifications
 1. **`parse_input_node`**:
-   - Inspects the latest user message.
-   - Decides whether the input is a raw Job Description (routes to `extract_requirements`), a refinement instruction (routes to `adjust_requirements`), or a general question (routes to `conversational_query`).
+   - Classifies incoming recruiter inputs into three paths: `raw_jd` (new job description), `adjust_requirements` (sidebar slider updates or chat constraint changes), or `conversational_query` (questions about candidates or system status).
 2. **`extract_requirements_node`**:
    - Calls the LLM (via `extract_requirements` tool) to parse must-have vs. nice-to-have skills, experience bounds, and target education from a new Job Description.
 3. **`adjust_requirements_node`**:
@@ -250,7 +270,7 @@ A clean markdown table comparing candidates side-by-side:
 
 ### A. Standalone Codebase & Replication Strategy
 To make the Agentic Profile Matching Engine completely independent and production-grade, the files and functionalities from Milestone 1 and Milestone 2 have been structured under the `src/agentic_profile_matching/` packaged namespace:
-- **`fs_tools.py`** (Milestone 1): Filesystem reader for text, DOCX, and PDF formats.
+- **`fs_tools.py`**: Multi-format document reader (TXT, DOCX, PDF) featuring **PyMuPDF** (`fitz`) layout-sorted multi-column text extraction, opt-in **Unstructured.io** PDF partitioning (`USE_UNSTRUCTURED=True`), and `pypdf` fallbacks.
 - **`config.py`, `resume_rag.py`, `job_matcher.py`, `generate_dataset.py`** (Milestone 2): Ingestion, RAG chunking, ChromaDB vector storage, BM25 indexing, and hybrid matching.
 - **`agent/` package** (LangGraph Orchestration): Decoupled package separating state definitions (`state.py`), prompt structures (`prompts.py`), router files (`routers.py`), nodes logic (`nodes.py`), and graph compiler (`__init__.py`).
 - **Clean Absolute Imports**: All modules import each other using standard absolute package-level imports (e.g. `from agentic_profile_matching import config`).

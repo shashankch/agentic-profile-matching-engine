@@ -50,19 +50,50 @@ def test_read_unsupported_file(temp_dir):
 
 
 @patch("agentic_profile_matching.fs_tools.PdfReader")
-def test_read_pdf_file(mock_pdf_reader, temp_dir):
+def test_read_pdf_file_pypdf_fallback(mock_pdf_reader, temp_dir):
     file_path = temp_dir / "test.pdf"
-    file_path.write_text("dummy")  # Need file to exist to pass path.exists() check
+    file_path.write_text("dummy")
 
-    # Mocking PdfReader structure
+    # Mocking PdfReader structure for pypdf fallback
     mock_page = MagicMock()
     mock_page.extract_text.return_value = "PDF page content"
     mock_pdf_reader.return_value.pages = [mock_page]
 
-    res = read_file(str(file_path))
-    assert res["success"] is True
-    assert res["content"] == "PDF page content"
-    assert res["metadata"]["extension"] == ".pdf"
+    with patch.dict("sys.modules", {"fitz": None}):
+        res = read_file(str(file_path))
+        assert res["success"] is True
+        assert res["content"] == "PDF page content"
+        assert res["metadata"]["extension"] == ".pdf"
+
+
+def test_read_pdf_file_pymupdf(temp_dir):
+    file_path = temp_dir / "test_pymupdf.pdf"
+    file_path.write_text("dummy")
+
+    mock_doc = MagicMock()
+    mock_page = MagicMock()
+    mock_page.get_text.return_value = "PyMuPDF sorted layout text"
+    mock_doc.__iter__.return_value = [mock_page]
+
+    with patch("fitz.open", return_value=mock_doc):
+        res = read_file(str(file_path))
+        assert res["success"] is True
+        assert res["content"] == "PyMuPDF sorted layout text"
+
+
+def test_read_pdf_unstructured_option(temp_dir, monkeypatch):
+    monkeypatch.setattr("agentic_profile_matching.config.USE_UNSTRUCTURED", True)
+    file_path = temp_dir / "test_unstructured.pdf"
+    file_path.write_text("dummy")
+
+    mock_el = MagicMock()
+    mock_el.__str__.return_value = "Unstructured element text"
+
+    mock_partition = MagicMock(return_value=[mock_el])
+    with patch.dict("sys.modules", {"unstructured.partition.pdf": MagicMock(partition_pdf=mock_partition)}):
+        res = read_file(str(file_path))
+        assert res["success"] is True
+        assert res["content"] == "Unstructured element text"
 
 
 @patch("agentic_profile_matching.fs_tools.Document")

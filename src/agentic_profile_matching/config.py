@@ -65,6 +65,9 @@ LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY", "")
 LANGFUSE_HOST = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
 OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
 
+# Ingestion Engine Configuration
+USE_UNSTRUCTURED = os.getenv("USE_UNSTRUCTURED", "false").lower() == "true"
+
 
 def get_llm_model(provider: str, model_name: str, api_key: str, api_url: Optional[str] = None):
     if provider == "Groq":

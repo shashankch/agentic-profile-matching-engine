@@ -1,11 +1,12 @@
-from pathlib import Path
-from typing import Dict, List, Optional
 from datetime import datetime
+from pathlib import Path
 import traceback
+from typing import Dict, List, Optional
 
-from pypdf import PdfReader
 from docx import Document
-# From github.com/shashankch/llm_file_system_assistant
+from pypdf import PdfReader
+
+from agentic_profile_matching import config
 
 SUPPORTED_EXTENSIONS = {".txt", ".pdf", ".docx"}
 
@@ -13,6 +14,7 @@ SUPPORTED_EXTENSIONS = {".txt", ".pdf", ".docx"}
 def read_file(filepath: str) -> Dict:
     """
     Read PDF/TXT/DOCX file and return content + metadata.
+    Uses PyMuPDF (fitz) with layout sorting for PDFs, with pypdf and Unstructured.io fallbacks.
     """
 
     try:
@@ -32,13 +34,36 @@ def read_file(filepath: str) -> Dict:
             content = path.read_text(encoding="utf-8", errors="ignore")
 
         elif extension == ".pdf":
-            reader = PdfReader(str(path))
+            # 1. Opt-in Unstructured.io layout partitioner
+            if getattr(config, "USE_UNSTRUCTURED", False):
+                try:
+                    from unstructured.partition.pdf import partition_pdf
 
-            content = "\n".join(page.extract_text() or "" for page in reader.pages)
+                    elements = partition_pdf(filename=str(path))
+                    content = "\n\n".join(str(el) for el in elements)
+                except Exception:
+                    content = ""
+
+            # 2. PyMuPDF (fitz) - Primary layout-aware engine with block sorting
+            if not content:
+                try:
+                    import fitz
+
+                    doc = fitz.open(str(path))
+                    pages_text = []
+                    for page in doc:
+                        text = page.get_text("text", sort=True)
+                        if text:
+                            pages_text.append(text)
+                    content = "\n\n".join(pages_text)
+                    doc.close()
+                except Exception:
+                    # 3. Standard pypdf fallback
+                    reader = PdfReader(str(path))
+                    content = "\n".join(page.extract_text() or "" for page in reader.pages)
 
         elif extension == ".docx":
             doc = Document(str(path))
-
             content = "\n".join(paragraph.text for paragraph in doc.paragraphs)
 
         return {

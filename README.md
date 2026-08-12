@@ -25,6 +25,7 @@ Detailed design diagrams, specifications, and requirements can be found in the [
 - **LangGraph Agent Workflow**: Orchestrates requirements extraction, coarse search, deep profile diagnostics, hiring recommendations, and human feedback loops.
 - **Production Observability & Node Tracing**: Structured JSON logging (`JsonFormatter`, `get_logger`) and `@trace_node` decorator instrumenting all 9 graph nodes with millisecond-level execution duration tracking (`node_start`, `node_end`, `node_error`) plus opt-in **Langfuse** and **OpenTelemetry** tracing.
 - **RAG Evaluation Pipeline**: Benchmark evaluation suite measuring hybrid retrieval Recall@K, Mean Reciprocal Rank (MRR), and screening report faithfulness against ground-truth evaluation scenarios (`data/eval_scenarios.json`).
+- **Layout-Aware PDF Ingestion**: **PyMuPDF** (`fitz`) layout-sorted multi-column text extraction with opt-in **Unstructured.io** PDF partitioning (`USE_UNSTRUCTURED=True`) and graceful `pypdf` fallbacks.
 - **[Model Context Protocol (MCP)][mcp] Dual-Mode Gateway**: Supports running direct local modules (Local Mode) or interfacing via stdio JSON-RPC 2.0 with separate MCP servers (MCP Mode) to handle file processes, directory-watching ingestions, and background thread-pool batch files parsing.
 - **Protocol-Enabled Search Engine**: Features a dedicated search MCP server supporting:
   - Live web searching via Tavily API (with fallback mock profiles for fictitious sandbox resumes).
@@ -82,6 +83,7 @@ agentic_profile_matching/
 │   └── test_mcp.py                # Unit tests for MCP server/client & fallbacks
 ├── docs/
 │   ├── architecture.md            # Detailed technical design specifications
+│   ├── ARCHITECTURE_DECISIONS.md  # Formal Architecture Decision Records (ADRs 001-007)
 │   ├── CONVENTIONS.md             # Engineering conventions & architectural standards
 │   ├── ROADMAP.md                 # Phased implementation roadmap with status tracking
 │   ├── state_machine.mermaid      # Mermaid diagram code of LangGraph state machine
@@ -98,6 +100,20 @@ agentic_profile_matching/
 ├── CHANGELOG.md                   # Chronological log of notable changes
 └── README.md                      # Project documentation
 ```
+
+---
+
+## Engineering Highlights & Architectural Decisions
+
+The codebase incorporates 7 formal Architecture Decision Records (**ADRs**), documented in detail in [`docs/ARCHITECTURE_DECISIONS.md`](docs/ARCHITECTURE_DECISIONS.md):
+
+- **ADR-001: MCP Dual-Mode Gateway**: Decouples in-process Python tools (`USE_MCP=False`) from FastMCP `stdio` JSON-RPC servers (`USE_MCP=True`), enabling seamless local development and production microservice deployment.
+- **ADR-002: `TypedDict` State Management**: Avoids Pydantic runtime validation overhead during LangGraph state transitions while enforcing strict Pydantic V2 models (`JobRequirementsOutput`, `DeepScreenOutput`) at LLM response boundaries.
+- **ADR-003: `BaseVectorStore` Structural Protocol**: Leverages Python `typing.Protocol` for structural subtyping without inheritance coupling, enabling interchangeable ChromaDB and Qdrant vector backends.
+- **ADR-004: BM25 Index Caching**: Caches tokenized BM25 sparse index matrices on `JobMatcher` with MD5 document fingerprint validation, cutting hybrid search latency from ~200ms down to ~0.1ms.
+- **ADR-005: Idempotent `upsert()` Ingestion**: Uses section-scoped deterministic chunk keys (`{filename}_chunk_{idx}`) to ensure 100% idempotent document re-ingestion without collection bloat.
+- **ADR-006: Celery + Redis Worker Architecture**: Non-blocking background worker queue (`tasks.py`, `celery_app.py`, `docker-compose.yml`) for asynchronous document processing and deep screening audits.
+- **ADR-007: Production Observability & Tracing**: Structured JSON logging (`JsonFormatter`, `get_logger`) and `@trace_node` decorator instrumenting all 9 workflow nodes with millisecond duration tracking and opt-in **Langfuse** / **OpenTelemetry** tracing.
 
 ---
 

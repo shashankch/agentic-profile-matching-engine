@@ -412,9 +412,17 @@ def recommendation_node(state: AgentState, config: Optional[RunnableConfig] = No
         try:
             score = c.get("score", 0)
             missing = c.get("missing_skills", [])
-            if score >= 72 and len(missing) == 0:
-                c["screening_status"] = "Strong Hire"
-            elif score >= 60 and len(missing) <= 1:
+            candidate_exp = c.get("experience_years", 0)
+            min_exp_req = requirements.get("min_experience_years", 0)
+
+            exp_meets = candidate_exp >= min_exp_req
+
+            if len(missing) == 0 and exp_meets:
+                if score >= 65:
+                    c["screening_status"] = "Strong Hire"
+                else:
+                    c["screening_status"] = "Borderline Hire"
+            elif len(missing) <= 1 and exp_meets and score >= 55:
                 c["screening_status"] = "Borderline Hire"
             else:
                 c["screening_status"] = "Rejected / No-Hire"
@@ -430,9 +438,6 @@ def generate_report_node(state: AgentState, config: Optional[RunnableConfig] = N
     Compiles candidate records, analysis reports, and interview matrices into a Markdown report.
     """
     shortlist = state.get("shortlist", [])
-    requirements = state.get("requirements", {})
-    messages = state.get("messages", [])
-
     requirements = state.get("requirements", {})
     ranking_explanation = state.get("ranking_explanation", "")
     messages = state.get("messages", [])
@@ -451,11 +456,11 @@ def generate_report_node(state: AgentState, config: Optional[RunnableConfig] = N
             llm = None
 
         prev_summary = "\n".join(
-            f"  {idx + 1}. {c['name']} (Score: {c['score']}/100, Status: {c.get('screening_status', 'Shortlisted')}, Matched Skills: {c.get('matched_skills', [])})"
+            f"  {idx + 1}. {c['name']} (Score: {c['score']}/100, Status: {c.get('screening_status', 'Shortlisted')}, Experience: {c.get('experience_years', 0)} Years, Matched Skills: {c.get('matched_skills', [])}, Missing Skills: {c.get('missing_skills', [])})"
             for idx, c in enumerate(state.get("previous_shortlist", []))
         )
         curr_summary = "\n".join(
-            f"  {idx + 1}. {c['name']} (Score: {c['score']}/100, Status: {c.get('screening_status', 'Shortlisted')}, Matched Skills: {c.get('matched_skills', [])})"
+            f"  {idx + 1}. {c['name']} (Score: {c['score']}/100, Status: {c.get('screening_status', 'Shortlisted')}, Experience: {c.get('experience_years', 0)} Years, Matched Skills: {c.get('matched_skills', [])}, Missing Skills: {c.get('missing_skills', [])})"
             for idx, c in enumerate(shortlist)
         )
 

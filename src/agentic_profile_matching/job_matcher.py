@@ -136,9 +136,22 @@ class JobMatcher:
             # Compute combined hybrid score: 60% semantic + 40% keyword
             semantic_score = semantic_scores_dict.get(doc_id, 0.5)
             bm25_score = normalized_bm25_scores[chunk_idx]
+            raw_hybrid = 0.6 * semantic_score + 0.4 * bm25_score
 
-            hybrid_score = 0.6 * semantic_score + 0.4 * bm25_score
-            score_100 = max(0, min(100, int(hybrid_score * 100)))
+            candidate_skills_str = meta.get("skills", "")
+            candidate_skills = [s.strip().lower() for s in candidate_skills_str.split(",") if s.strip()]
+
+            if must_have_skills:
+                matched_must_count = sum(1 for s in must_have_skills if s.lower() in candidate_skills)
+                skill_ratio = matched_must_count / len(must_have_skills)
+            else:
+                skill_ratio = 1.0
+
+            exp_satisfied = 1.0 if candidate_exp >= min_exp else max(0.5, candidate_exp / max(1, min_exp))
+
+            # Weighted overall match score (0 - 100): 50% hybrid vector/keyword + 35% skill ratio + 15% experience ratio
+            final_score_norm = (0.50 * raw_hybrid) + (0.35 * skill_ratio) + (0.15 * exp_satisfied)
+            score_100 = max(0, min(100, int(final_score_norm * 100)))
 
             resume_path = meta.get("resume_path")
             if resume_path not in candidate_matches:

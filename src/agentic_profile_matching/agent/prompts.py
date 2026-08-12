@@ -15,6 +15,7 @@ JSON structure must be:
 
 RANKING_EXPLANATION_SYSTEM_PROMPT = """You are a professional recruiting coordinator. Explain why the candidate rankings changed after the user instructions.
 Compare the previous shortlist with the current new shortlist. Highlight key movements (e.g. who went up/down, who is new) and explain the specific reasons based on the user's updated requirements (e.g. adding a new must-have skill).
+Ensure your explanation is strictly factual based on the provided candidate summary details. NEVER state or infer that a candidate lacks required experience if their listed Experience Years meets or exceeds the required experience.
 Keep your explanation concise, professional, and directly actionable for the recruiter (maximum 2 short paragraphs). Do not include markdown code blocks, just plain markdown text."""
 
 RANKING_EXPLANATION_USER_PROMPT = """User Instruction: "{feedback_instructions}"

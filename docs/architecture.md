@@ -405,7 +405,28 @@ The repository includes a production multi-container setup via `docker-compose.y
 
 ---
 
-## 9. Project Roadmap & Development Standards
+## 9. Production-Grade Quality Standards & Guardrails
+
+To prevent LLM hallucinations, arbitrary score cutoffs, and brittle evaluation logic, the engine enforces 4 production-grade guardrail standards:
+
+1. **Dynamic Multi-Factor Scoring Model**
+   - Candidate match scores ($0 - 100$) are calculated in `job_matcher.py` by dynamically combining min-max normalized vector similarity, stop-word filtered BM25 keyword matching, mandatory skill coverage ratio, and experience satisfaction ratio.
+   - Prevents artificial score compression and handles arbitrary open-ended queries cleanly.
+
+2. **Grounded LLM Decision Hierarchy**
+   - Prioritizes LLM deep screening status assessments (`"Strong Hire"`, `"Borderline Hire"`, `"Rejected / No-Hire"`) generated during full resume text audits in `deep_screen_node`.
+   - Enforces hard safety guardrails in `recommendation_node` (e.g. overriding status to `Rejected / No-Hire` if mandatory skills or minimum experience are missing).
+
+3. **Fact-Grounded Prompting**
+   - Explicitly passes candidate ground-truth metadata (`Experience Years`, `Matched Skills`, `Missing Skills`) into all report explanation prompts.
+   - Prohibits LLM prompt hallucinations (e.g., claiming a candidate lacks experience when their experience meets requirements).
+
+4. **100% Ingestion & State Idempotency**
+   - Document chunking uses section-scoped deterministic chunk keys (`{filename}_chunk_{idx}`) for idempotent vector store `upsert()`.
+
+---
+
+## 10. Project Roadmap & Development Standards
 
 - **Implementation Roadmap**: Phased implementation plan, current progress status (tracked with emojis `✅`, `⏳`, `⬜`), and future backlog are maintained in [ROADMAP.md](../ROADMAP.md).
 - **Engineering Conventions**: Architectural design principles, Pydantic V2 schemas, state immutability, and resilience bounds are documented in [CONVENTIONS.md](../CONVENTIONS.md).

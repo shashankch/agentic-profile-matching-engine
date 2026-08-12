@@ -408,24 +408,29 @@ def recommendation_node(state: AgentState, config: Optional[RunnableConfig] = No
                 "How do you handle microservices architecture issues?",
             ]
 
-        # Heuristics + LLM recommendations validation
+        # Preserve LLM deep screening decision if assigned, enforcing mandatory constraint safety guardrails
         try:
-            score = c.get("score", 0)
+            llm_status = c.get("screening_status", "")
             missing = c.get("missing_skills", [])
             candidate_exp = c.get("experience_years", 0)
             min_exp_req = requirements.get("min_experience_years", 0)
 
             exp_meets = candidate_exp >= min_exp_req
 
-            if len(missing) == 0 and exp_meets:
-                if score >= 65:
-                    c["screening_status"] = "Strong Hire"
+            if llm_status in ["Strong Hire", "Borderline Hire", "Rejected / No-Hire"]:
+                # Guardrail: If candidate is missing mandatory skills or fails exp, override to Rejected
+                if (len(missing) > 0 and len(missing) > 1) or not exp_meets:
+                    c["screening_status"] = "Rejected / No-Hire"
                 else:
-                    c["screening_status"] = "Borderline Hire"
-            elif len(missing) <= 1 and exp_meets and score >= 55:
-                c["screening_status"] = "Borderline Hire"
+                    c["screening_status"] = llm_status
             else:
-                c["screening_status"] = "Rejected / No-Hire"
+                # Dynamic fallback if LLM status was not assigned
+                if len(missing) == 0 and exp_meets:
+                    c["screening_status"] = "Strong Hire"
+                elif len(missing) <= 1 and exp_meets:
+                    c["screening_status"] = "Borderline Hire"
+                else:
+                    c["screening_status"] = "Rejected / No-Hire"
         except Exception:
             c["screening_status"] = "Screened"
 

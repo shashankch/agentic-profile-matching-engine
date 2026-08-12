@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 2026-08-12
 ### Added
-- Created formal **Architecture Decision Records (ADRs)** in `docs/ARCHITECTURE_DECISIONS.md` documenting 7 key architectural design choices across all project milestones.
-- Published comprehensive "Engineering Highlights & Architectural Decisions" section in `README.md`.
-- Finalized complete production closeout, updating package `__all__` exports across `stores`, `services`, and `agent` packages.
+- Implemented production-grade **Multi-Factor Hybrid Candidate Scoring** in `job_matcher.py` combining min-max normalized vector similarity, stop-word filtered BM25 keyword matching, mandatory skill coverage ratio, and experience satisfaction ratio.
+- Established grounded **LLM Recommendation Hierarchy** in `recommendation_node` that preserves LLM deep screening status assessments while enforcing hard mandatory safety guardrails (missing skills / experience deficits).
+- Created **ADR-008: Multi-Factor Hybrid Candidate Scoring & Grounded LLM Recommendation Hierarchy** in `docs/ARCHITECTURE_DECISIONS.md`.
+- Published 8 formal Architecture Decision Records (ADRs 001–008) in `docs/ARCHITECTURE_DECISIONS.md`.
+- Updated package `__all__` exports across `stores`, `services`, and `agent` packages for complete production closeout.
 
 ## [0.9.4] - 2026-08-12
 ### Added

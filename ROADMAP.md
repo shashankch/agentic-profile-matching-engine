@@ -53,7 +53,7 @@ This document outlines the phased plan for building the Agentic Profile Matching
    - **9.4 — PyMuPDF / Unstructured.io Ingestion Upgrade** ✅: Upgraded PDF ingestion using **[PyMuPDF]** (`fitz`) for layout-sorted multi-column parsing, with opt-in **[Unstructured.io]** support plugged through `fs_tools.py` and `IngestionService`.
 
 10. **Phase 10: Architecture Documentation & Project Closeout** ✅
-    - Published formal Architecture Decision Records (ADRs 001–007) in `docs/ARCHITECTURE_DECISIONS.md`.
+    - Published formal Architecture Decision Records (ADRs 001–008) in `docs/ARCHITECTURE_DECISIONS.md`.
     - Synchronized all repository documentation (`README.md`, `ROADMAP.md`, `CONVENTIONS.md`, `CONTRIBUTING.md`, `docs/architecture.md`) to reflect full `v1.0.0` production baseline.
 
 ---

@@ -83,7 +83,7 @@ agentic_profile_matching/
 │   └── test_mcp.py                # Unit tests for MCP server/client & fallbacks
 ├── docs/
 │   ├── architecture.md            # Detailed technical design specifications
-│   ├── ARCHITECTURE_DECISIONS.md  # Formal Architecture Decision Records (ADRs 001-007)
+│   ├── ARCHITECTURE_DECISIONS.md  # Formal Architecture Decision Records (ADRs 001-008)
 │   ├── CONVENTIONS.md             # Engineering conventions & architectural standards
 │   ├── ROADMAP.md                 # Phased implementation roadmap with status tracking
 │   ├── state_machine.mermaid      # Mermaid diagram code of LangGraph state machine

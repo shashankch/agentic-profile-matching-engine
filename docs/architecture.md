@@ -143,16 +143,16 @@ graph TD
    - Invokes the RAG Hybrid Search engine using the parsed requirements or query term.
    - Pulls candidate resume chunks, metadata, and files using local hybrid match or MCP search client.
 6. **`rank_candidates_node` (Round 1 - Coarse Filtering)**:
-   - Computes initial candidate ranks by aggregating retrieval match scores (60% semantic + 40% BM25 keyword score) and applying hard constraints (e.g., must-have skills, minimum experience).
+   - Computes initial candidate ranks using a production-grade multi-factor hybrid scoring model (min-max vector similarity, stop-word filtered BM25 keyword matching, mandatory skill coverage ratio, and experience satisfaction ratio).
    - Slices the shortlist to the top candidates (typically top 10) to limit downstream token consumption.
 7. **`deep_screen_node` (Round 2 - Profile Deep Analysis)**:
    - Evaluates top-tier candidate resumes sequentially using deep LLM text analysis.
-   - Extracts specific strengths, identifies skill gaps, and writes contextual improvement suggestions.
+   - Extracts specific strengths, identifies skill gaps, writes actionable improvement suggestions, and assigns a qualitative hiring status (`"Strong Hire"`, `"Borderline Hire"`, `"Rejected / No-Hire"`).
 8. **`recommendation_node` (Round 3 - Hiring Decisions & Questions)**:
-   - Makes final Hire / Borderline / Rejected recommendation based on candidate scores.
+   - Preserves the LLM deep screening status decision while applying mandatory safety guardrails (overriding to `Rejected / No-Hire` if mandatory skills or minimum experience are missing).
    - Generates candidate-specific technical screening questions targeting identified gaps.
 9. **`generate_report_node`**:
-   - Compiles the final ranked list, matching details, side-by-side comparison matrix, and custom interview questions into a comprehensive markdown report. Appends a conversational summary back to the state messages.
+   - Compiles the final ranked list, matching details, side-by-side comparison matrix, and custom interview questions into a comprehensive markdown report. Appends a fact-grounded conversational summary back to the state messages.
 
 **Human Feedback Loop Execution**:
 The workflow does not halt inside a node of the graph. Instead, state persistence and human interaction are managed by the Streamlit application using LangGraph `MemorySaver` checkpointers. When a recruiter inputs new feedback or questions, the application triggers a new graph run under the same `thread_id` session, sending the input back to `parse_input_node` to determine the routing path.

@@ -110,8 +110,26 @@ class JobMatcher:
                 semantic_scores_dict[r_id] = max(0.0, min(1.0, sim))
 
         # 2. Keyword Search using cached BM25 with stop-word filtering
-        stop_words = {"the", "and", "for", "with", "that", "this", "from", "you", "are", "have", "looking", "years", "year", "exp", "experience"}
-        tokenized_query = [w for w in re.findall(r"\b\w+\b", job_description.lower()) if len(w) > 1 and w not in stop_words]
+        stop_words = {
+            "the",
+            "and",
+            "for",
+            "with",
+            "that",
+            "this",
+            "from",
+            "you",
+            "are",
+            "have",
+            "looking",
+            "years",
+            "year",
+            "exp",
+            "experience",
+        }
+        tokenized_query = [
+            w for w in re.findall(r"\b\w+\b", job_description.lower()) if len(w) > 1 and w not in stop_words
+        ]
         if not tokenized_query:
             tokenized_query = job_description.lower().split()
 

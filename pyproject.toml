@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentic_profile_matching"
-version = "0.9.3"
+version = "1.0.0"
 description = "Production-grade Agentic Profile Matching Engine"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,6 +12,7 @@ dependencies = [
     "chromadb>=1.5.9",
     "sentence-transformers",
     "pypdf",
+    "pymupdf",
     "python-docx",
     "rank-bm25",
     "reportlab",

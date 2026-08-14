@@ -102,7 +102,7 @@ python -m agentic_profile_matching.run_scenarios
 
 ## 📐 Development & Architectural Guidelines
 
-Please review our [Engineering Conventions](CONVENTIONS.md) (`CONVENTIONS.md`) before submitting non-trivial PRs.
+Please review our [Engineering Conventions](docs/CONVENTIONS.md) (`docs/CONVENTIONS.md`) before submitting non-trivial PRs.
 
 Key expectations:
 - **Clean Separation**: Keep domain logic decoupled from UI/RPC handlers.

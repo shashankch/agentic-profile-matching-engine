@@ -45,23 +45,25 @@ This document outlines the phased plan for building the Agentic Profile Matching
 
 9. **Phase 9: Production Observability, RAG Evaluation & Richer Ingestion** ✅
    - **9.1 — Structured Logging & Node Tracing Decorator** ✅: Introduce structured JSON logging (`JsonFormatter`, `get_logger`) and a `@trace_node` decorator with per-node latency timing and trace event correlation; replace diagnostic `print()` calls throughout.
-
    - **9.2 — Langfuse / OpenTelemetry Tracing Integration** ✅: Integrate **[Langfuse]** and **[OpenTelemetry]** as opt-in tracing backends wired dynamically through the `@trace_node` decorator with zero changes to node logic.
-
    - **9.3 — RAG Evaluation Pipeline (Recall & Faithfulness)** ✅: Incorporate automated evaluation pipelines (`tests/eval/`) measuring candidate retrieval recall@K, MRR, and LLM screening faithfulness against ground-truth benchmark scenarios (`data/eval_scenarios.json`).
-
    - **9.4 — PyMuPDF / Unstructured.io Ingestion Upgrade** ✅: Upgraded PDF ingestion using **[PyMuPDF]** (`fitz`) for layout-sorted multi-column parsing, with opt-in **[Unstructured.io]** support plugged through `fs_tools.py` and `IngestionService`.
 
 10. **Phase 10: Architecture Documentation & Project Closeout** ✅
     - Published formal Architecture Decision Records (ADRs 001–008) in `docs/ARCHITECTURE_DECISIONS.md`.
-    - Synchronized all repository documentation (`README.md`, `ROADMAP.md`, `CONVENTIONS.md`, `CONTRIBUTING.md`, `docs/architecture.md`) to reflect full `v1.0.0` production baseline.
+    - Synchronized all repository documentation (`README.md`, `docs/ROADMAP.md`, `docs/CONVENTIONS.md`, `CONTRIBUTING.md`, `docs/architecture.md`) to reflect full `v1.0.0` production baseline.
 
 ---
 
 ## 🔮 Future Backlog (Post-Release)
 
-- **Multi-Agent Consensus Loop**: Incorporate independent agent personas (e.g., Technical Screener vs. HR/Sourcing Screener) to run an internal review before final recommendation.
-- **Bias & Fairness Auditing**: Add an automated checker to audit Job Descriptions for inclusive language and flag potential constraint biases.
+- **Indirect Prompt Injection Defense**: Pre-screening sanitization of adversarial instructions in resume text.
+- **PII Anonymization Layer**: Reversible candidate entity tokenization for privacy compliance.
+- **Semantic Embedding Cache**: Sub-10ms repeat candidate screening cache.
+- **Parallel Async Batch Screening**: Rate-limited semaphore concurrency for Round 2 audits.
+- **Human-in-the-Loop Workflow Gate**: LangGraph `interrupt()` approval step before recruiter outreach.
+- **Multi-Agent Consensus Loop**: Independent screener personas (Technical vs. HR/Sourcing) review before final recommendation.
+- **Bias & Fairness Auditing**: Automated checker auditing JDs and evaluations for inclusive language and constraint biases.
 
 ---
 

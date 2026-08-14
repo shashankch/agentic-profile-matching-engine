@@ -1,37 +1,124 @@
-# Agentic Profile Matching Engine: Architecture Design
+# Agentic Profile Matching Engine: Technical Architecture
 
-This document details the software architecture, LangGraph state machine workflow, tool specification, and explainability engine for the **Agentic Profile Matching Engine**. This agent serves as an intelligent recruiter assistant that parses job descriptions (JDs), searches resumes, performs multi-round screening, and handles interactive refinement.
+This document provides the comprehensive technical architecture, dataflow sequence diagrams, mathematical scoring formulations, state machine specifications, and system designs for the **Agentic Profile Matching Engine**.
 
 ---
 
-## 1. System Overview & Context
+## 1. System Overview & Architectural Topology
 
-The Agentic Profile Matching Engine is built on top of two prior milestones:
-- **Milestone 1 (llm_file_system_assistant)**: High-performance filesystem utilities for extraction of text/metadata from `.txt`, `.pdf`, and `.docx` files.
-- **Milestone 2 (rag_profile_matching)**: Hybrid semantic (ChromaDB + Sentence Transformers) and keyword (BM25 Okapi) search retrieval pipeline.
-
-The agent coordinates these layers through an **LLM-driven state machine** using LangGraph, providing an interactive conversational interface that accepts natural language instructions and feedback to recursively refine candidates.
+The Agentic Profile Matching Engine coordinates document parsing, vector indexing, sparse keyword retrieval, multi-round LLM screening, and real-time conversational refinement.
 
 ```mermaid
-graph LR
-    User[End User] <--> UX[Conversational CLI / Streamlit Interface]
-    UX <--> Agent[LangGraph Agentic Loop]
-    subgraph Tooling Layer
-        Agent --> FS[Milestone 1: File System Tools]
-        Agent --> RAG[Milestone 2: Hybrid RAG Search]
-        Agent --> Analysis[Analysis Tools: Extract, Compare, QGen]
+graph TB
+    subgraph Client ["🖥️ Presentation Layer"]
+        UI["Streamlit Recruiter Dashboard<br/>(Dual-Pane Chat, Shortlist Cards, Comparison Matrix)"]
+    end
+
+    subgraph AgentCore ["🧠 Agentic Workflow Engine (LangGraph)"]
+        StateGraph["LangGraph State Machine (MemorySaver Checkpointing)"]
+        Nodes["9 Specialized Workflow Nodes<br/>(Parsing, Extraction, Retrieval, Deep Screen, QGen, Report)"]
+        Routers["Conditional Routing & Dynamic Dispatch"]
+    end
+
+    subgraph GatewayLayer ["🔌 Dual-Mode Tool Gateway (ADR-001)"]
+        FSGateway["fs_client.py / IngestionService"]
+        DirectExec["In-Process Direct Execution (USE_MCP=False)"]
+        MCPExec["FastMCP stdio JSON-RPC 2.0 (USE_MCP=True)"]
+    end
+
+    subgraph StorageLayer ["💾 Storage & Indexing Subsystem"]
+        VectorStore["BaseVectorStore Protocol (ADR-003)<br/>ChromaDB / Qdrant"]
+        SparseIndex["BM25Okapi Index Cache (ADR-004)"]
+        DocIngest["PyMuPDF Layout-Sorted Text Extractor (fitz)"]
+    end
+
+    subgraph DistributedSubsystem ["⚡ Distributed Workers & Observability"]
+        CeleryRedis["Celery Workers + Redis Broker (ADR-006)"]
+        TraceEngine["@trace_node Instrumenter (ADR-007)<br/>OpenTelemetry & Langfuse"]
+        JSONLog["Structured JSON APM Logger"]
+    end
+
+    Client <--> AgentCore
+    AgentCore --> GatewayLayer
+    GatewayLayer --> DirectExec
+    GatewayLayer --> MCPExec
+    DirectExec --> StorageLayer
+    MCPExec --> StorageLayer
+    AgentCore -.-> DistributedSubsystem
+    StorageLayer -.-> DistributedSubsystem
+```
+
+### Core Architectural Principles
+1. **Separation of Concerns (SoC)**: Presentation logic (Streamlit), agent orchestration (LangGraph), business services (`IngestionService`), and transport protocols (FastMCP) remain completely decoupled.
+2. **Protocol-Driven Abstraction**: Vector store operations conform to the `BaseVectorStore` structural protocol (`typing.Protocol`), enabling zero-code changes when switching between ChromaDB, Qdrant, or cloud vector stores.
+3. **Idempotency by Design**: Ingestion keys are deterministically generated from document names and section indices (`{file}_chunk_{idx}`), guaranteeing safe, duplicate-free re-indexing.
+4. **Cascading Cost & Latency Optimization**: Dense embedding and BM25 scoring narrow large candidate pools down to top contenders locally ($0$ LLM cost), running compute-intensive LLM deep audits strictly on the top-ranked candidates ($O(N) \to O(K)$).
+
+---
+
+## 2. End-to-End Execution Sequence
+
+The sequence diagram below traces the end-to-end execution lifecycle from initial job description input through coarse ranking, LLM deep screening, hiring recommendation, and conversational constraint refinement:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Recruiter as Recruiter / Hiring Manager
+    participant UI as Streamlit UI
+    participant Agent as LangGraph Orchestrator
+    participant Parser as parse_input_node
+    participant Search as search_resumes_node
+    participant Matcher as JobMatcher (Hybrid Engine)
+    participant DeepScreen as deep_screen_node
+    participant Recommend as recommendation_node
+    participant LLM as External LLM (Groq / Gemini)
+
+    Recruiter->>UI: Submit Job Description ("Looking for Python Dev with 3+ yrs exp")
+    UI->>Agent: execute_graph(user_input, thread_id)
+    Agent->>Parser: Classify input type
+    Parser-->>Agent: route -> extract_requirements
+    Agent->>LLM: extract_requirements(jd_text)
+    LLM-->>Agent: JobRequirements(skills=['Python'], min_exp=3)
+    
+    Agent->>Search: search_resumes_node(requirements)
+    Search->>Matcher: match(query, min_exp=3, must_have=['Python'])
+    Matcher->>Matcher: 1. Vector Search + Min-Max Scaling (50%)
+    Matcher->>Matcher: 2. Stop-word Filtered BM25 (35%)
+    Matcher->>Matcher: 3. Skills/Exp Satisfaction (15%)
+    Matcher-->>Search: Top 10 Shortlisted Candidates (Coarse Filter)
+    
+    Agent->>DeepScreen: deep_screen_node(Top 5 Candidates)
+    loop For Each Top Candidate
+        DeepScreen->>LLM: deep_screen_prompt(Candidate Resume + JD)
+        LLM-->>DeepScreen: Strengths, Gaps, Status ("Strong Hire")
+    end
+    
+    Agent->>Recommend: recommendation_node()
+    Recommend->>Recommend: Apply Hard Safety Guardrails (Check Missing Skills/Exp)
+    Recommend->>LLM: generate_custom_questions(Gaps)
+    LLM-->>Recommend: 3-5 Tailored Technical Interview Questions
+    
+    Agent->>UI: Render Shortlist Cards, Comparison Matrix & Audit Reports
+    UI-->>Recruiter: Interactive Recruiter Dashboard
+    
+    opt Conversational Refinement
+        Recruiter->>UI: "Make Kubernetes a must-have skill"
+        UI->>Agent: execute_graph("Make Kubernetes a must-have", thread_id)
+        Agent->>Parser: Route -> adjust_requirements
+        Agent->>Search: Re-run Search & Scoring
+        Agent->>UI: Render Updated Shortlist + Ranking Changes Explanation
     end
 ```
 
 ---
 
-## 2. Core Agent Architecture (LangGraph)
+## 3. LangGraph Agent Workflow & State Machine
 
-### A. Agent State Design
-The LangGraph `State` is defined as a Python `TypedDict` schema (`agent/state.py`) representing the shared memory of graph execution. It enforces field types while keeping sensitive credentials (`api_key`, `api_url`) out of serializable state checkpoints (which are passed securely via graph configuration `config["configurable"]`):
+### A. Graph State Design (`AgentState`)
+The agent state schema (`agent/state.py`) is defined as a Python `TypedDict`, avoiding serialization overhead during checkpoint transitions while enforcing strict Pydantic V2 schemas at LLM boundaries:
 
 ```python
-from typing import TypedDict, List, Dict, Any, Optional
+from typing import TypedDict, List, Optional
 from langchain_core.messages import BaseMessage
 
 class JobRequirements(TypedDict, total=False):
@@ -74,43 +161,12 @@ class AgentState(TypedDict, total=False):
     errors: List[str]
 ```
 
-### B. Graph State Machine Workflow
-The execution flows through specialized nodes that handle requirements parsing, retrieval, ranking, deep screening, report generation, and interaction:
-
-```mermaid
-graph TD;
-	__start__([<p>__start__</p>]):::first
-	parse_input(parse_input)
-	extract_requirements(extract_requirements)
-	adjust_requirements(adjust_requirements)
-	conversational_query(conversational_query)
-	search_resumes(search_resumes)
-	rank_candidates(rank_candidates)
-	deep_screen(deep_screen)
-	recommendation(recommendation)
-	generate_report(generate_report)
-	__end__([<p>__end__</p>]):::last
-	__start__ --> parse_input;
-	adjust_requirements --> search_resumes;
-	deep_screen --> recommendation;
-	extract_requirements --> search_resumes;
-	parse_input -.-> adjust_requirements;
-	parse_input -.-> conversational_query;
-	parse_input -.-> extract_requirements;
-	rank_candidates --> deep_screen;
-	recommendation --> generate_report;
-	search_resumes --> rank_candidates;
-	conversational_query --> __end__;
-	generate_report --> __end__;
-	classDef default fill:#f2f0ff,line-height:1.2
-	classDef first fill-opacity:0
-## 2. Agent Workflow & LangGraph State Machine
-
-The agent orchestrates candidate screening through a **9-node LangGraph StateGraph**.
+### B. State Graph Topology & Routing
+The workflow is implemented as a 9-node `StateGraph` compiled with `MemorySaver` in-memory checkpointing for persistent session tracking via `thread_id`:
 
 ```mermaid
 graph TD
-    START([Start / User Input]) --> parse_input[parse_input_node]
+    START([Start / Recruiter Input]) --> parse_input[parse_input_node]
     
     parse_input -- Raw Job Description --> extract_req[extract_requirements_node]
     parse_input -- Conversational Query --> conv_query[conversational_query_node]
@@ -128,309 +184,181 @@ graph TD
     conv_query --> END
 ```
 
-### Node Specifications
-1. **`parse_input_node`**:
-   - Classifies incoming recruiter inputs into three paths: `raw_jd` (new job description), `adjust_requirements` (sidebar slider updates or chat constraint changes), or `conversational_query` (questions about candidates or system status).
-2. **`extract_requirements_node`**:
-   - Calls the LLM (via `extract_requirements` tool) to parse must-have vs. nice-to-have skills, experience bounds, and target education from a new Job Description.
-3. **`adjust_requirements_node`**:
-   - Conversational feedback loop that refines existing job requirements constraints using the recruiter's latest comments/instructions (routes back to `search_resumes` for updated search).
-4. **`conversational_query_node`**:
-   - Answers direct conversational questions from the recruiter (e.g. *"Why did Candidate A rank higher than Candidate B?"*).
-   - Operates as a dynamic tool-calling node (using an isolated ReAct loop) bound to `search_web_tool` and `fetch_candidate_notes_tool` wrappers.
-   - If the query can be answered using the active shortlist data present in the context, it answers directly (0 tool calls). If external information is requested (e.g., searching the web or retrieving internal HR screening files), it invokes the corresponding MCP search server tools on-demand.
-5. **`search_resumes_node`**:
-   - Invokes the RAG Hybrid Search engine using the parsed requirements or query term.
-   - Pulls candidate resume chunks, metadata, and files using local hybrid match or MCP search client.
-6. **`rank_candidates_node` (Round 1 - Coarse Filtering)**:
-   - Computes initial candidate ranks using a production-grade multi-factor hybrid scoring model (min-max vector similarity, stop-word filtered BM25 keyword matching, mandatory skill coverage ratio, and experience satisfaction ratio).
-   - Slices the shortlist to the top candidates (typically top 10) to limit downstream token consumption.
-7. **`deep_screen_node` (Round 2 - Profile Deep Analysis)**:
-   - Evaluates top-tier candidate resumes sequentially using deep LLM text analysis.
-   - Extracts specific strengths, identifies skill gaps, writes actionable improvement suggestions, and assigns a qualitative hiring status (`"Strong Hire"`, `"Borderline Hire"`, `"Rejected / No-Hire"`).
-8. **`recommendation_node` (Round 3 - Hiring Decisions & Questions)**:
-   - Preserves the LLM deep screening status decision while applying mandatory safety guardrails (overriding to `Rejected / No-Hire` if mandatory skills or minimum experience are missing).
-   - Generates candidate-specific technical screening questions targeting identified gaps.
-9. **`generate_report_node`**:
-   - Compiles the final ranked list, matching details, side-by-side comparison matrix, and custom interview questions into a comprehensive markdown report. Appends a fact-grounded conversational summary back to the state messages.
+### C. Node Responsibilities & Specifications
 
-**Human Feedback Loop Execution**:
-The workflow does not halt inside a node of the graph. Instead, state persistence and human interaction are managed by the Streamlit application using LangGraph `MemorySaver` checkpointers. When a recruiter inputs new feedback or questions, the application triggers a new graph run under the same `thread_id` session, sending the input back to `parse_input_node` to determine the routing path.
+| Node | Purpose | Inputs | Outputs | Error Boundary / Fallback |
+|:---|:---|:---|:---|:---|
+| **`parse_input_node`** | Classifies incoming text as raw JD, constraint adjustment, or conversational query | `messages[-1]` | Routing decision | Defaults to `raw_jd` on ambiguous input |
+| **`extract_requirements_node`** | Extracts structured requirements from raw JDs via LLM | Raw JD string | `JobRequirements` | Pydantic validation fallback |
+| **`adjust_requirements_node`** | Updates active requirements based on recruiter comments/slider changes | Active requirements + comment | Modified `JobRequirements` | Retains previous requirements on failure |
+| **`conversational_query_node`** | Answers free-form recruiter questions via ReAct loop with MCP tools | User question + context | Response message | Direct context answering without tools |
+| **`search_resumes_node`** | Queries ChromaDB and BM25 index via `JobMatcher` | `JobRequirements` | Raw candidate matches | Returns empty list if no matches found |
+| **`rank_candidates_node` (Round 1)** | Applies multi-factor hybrid scoring and slices top $N$ candidates | Candidate matches | Shortlist (Top 10) | Preserves existing sort order |
+| **`deep_screen_node` (Round 2)** | Sequential LLM audit extracting strengths, gaps, and status | Shortlist (Top 5) | Enriched `CandidateMatch` | Default strengths/gaps on LLM failure |
+| **`recommendation_node` (Round 3)** | Applies safety guardrails and synthesizes interview questions | Enriched Shortlist | Final status + questions | Status override on skill/exp deficits |
+| **`generate_report_node`** | Compiles markdown comparison matrix and chat response | Full Shortlist | `final_report` markdown | Generates fallback text summary |
 
 ---
 
-## 3. Tooling Layer Specification
+## 4. Hybrid Search & Multi-Factor Scoring Engine
 
-The agent interacts with the workspace through schema-defined tools. These tools bridge the agent to the underlying filesystems and index structures:
+Candidate matching in `job_matcher.py` combines dense semantic search (ChromaDB), sparse lexical search (BM25 Okapi), and hard qualification constraints into a deterministic **0–100 Match Score**.
 
-### A. Reused Filesystem Tools (Milestone 1)
-- **`list_files(directory: str, extension: Optional[str])`**: Scan directories recursively to identify untracked or raw resume formats.
-- **`read_file(filepath: str)`**: Direct extraction of text from `.txt`, `.docx` (Word), and `.pdf` files.
-- **`search_in_file(filepath: str, keyword: str, context_size: int, limit: int)`**: Target specific keyword hits in candidate records.
+```mermaid
+graph LR
+    subgraph Inputs ["Query & Filters"]
+        JD["Job Query / Requirements"]
+        Filters["Must-Have Skills & Min Exp"]
+    end
 
-### B. Reused RAG Search Tool (Milestone 2)
-- **`rag_hybrid_search(query: str, limit: int, min_experience: Optional[int], must_have_skills: Optional[List[str]])`**: Runs the 60/40 semantic-lexical hybrid search against ChromaDB, applying constraints at the retrieval layer.
+    subgraph Scoring ["Multi-Factor Scoring Pipeline"]
+        Dense["1. Dense Vector Search<br/>Min-Max Scaling (1.0 to 0.5)"]
+        Sparse["2. BM25 Sparse Search<br/>Stop-Word Filtered + Normalized"]
+        Quals["3. Qualification Ratios<br/>Skill Match % + Experience Ratio"]
+    end
 
-### C. New AI-Assisted Assessment Tools
-- **`extract_requirements(jd: str, llm) -> Dict[str, Any]`**:
-  - LLM parses structured requirements from unstructured JDs.
-  - *Returns*: `{"title": str, "must_have_skills": [], "nice_to_have_skills": [], "min_experience_years": int, "education_level": str, "other_constraints": []}`.
-- **`compare_candidates(candidate_ids: List[str], shortlist: List[Dict]) -> str`**:
-  - Summarizes profiles head-to-head.
-  - *Returns*: A structured Markdown comparison table grid comparing Candidates on: Experience, Match Score, Match Skills, Missing Skills, and Education.
-- **`generate_interview_questions(candidate_name: str, skills: List[str], gaps: List[str], requirements: Dict[str, Any], llm) -> List[str]`**:
-  - Inspects candidate profile against requirements.
-  - *Returns*: 3-5 technical questions tailored to probe the candidate's gaps (e.g., *"You have extensive Python experience, but the JD requires Kubernetes. Can you explain your exposure to container orchestration?"*).
+    subgraph Output ["Final Candidate Score (0-100)"]
+        Combined["Dynamic Weighted Sum<br/>50% Hybrid + 35% Skills + 15% Exp"]
+    end
 
-### D. Protocol-Enabled Search Tools (MCP Mode)
-- **`search_web(query: str) -> Dict`**: Performs live Tavily API web searches for candidate public portfolios, GitHub repositories, or LinkedIn handles.
-- **`search_chroma_db(query: str, limit: int) -> Dict`**: semantic RAG vector store search over ingested resumes, returning candidates, sections, and excerpts.
-- **`fetch_candidate_notes(candidate_name: str) -> Dict`**: Resolves mock screening notes compiled internally by HR coordinators.
-
----
-
-## 4. Multi-Round Screening Pipeline
-
-To optimize cost and efficiency, the agent executes a cascading screening model:
-
-| Screening Stage | Focus | Candidates Checked | Method | Cost / Latency Profile |
-|---|---|---|---|---|
-| **Round 1: Coarse Filtering** | Hard constraints & Retrieval Match | All (e.g., 30-100+) | Hybrid Retrieval + Filter metadata checks | Low latency / Low token cost |
-| **Round 2: Deep Analysis** | Soft constraints, gaps, strengths | Top 10 | LLM deep review of complete resume text | Medium latency / High reasoning |
-| **Round 3: Decision & QGen** | Hire/No-hire & tailored screening | Top 3 - 5 | LLM final validation + Tailored Question Generation | High reasoning |
-
-```
-   [ All Resumes ] 
-          │
-          ▼
-   ┌──────────────┐
-   │   Round 1    │  <-- Meta Filters & 60/40 Hybrid Search
-   └──────────────┘
-          │ (Filters to Top 10)
-          ▼
-   ┌──────────────┐
-   │   Round 2    │  <-- Deep Text Evaluation (Strengths / Gaps)
-   └──────────────┘
-          │ (Filters to Top 3-5)
-          ▼
-   ┌──────────────┐
-   │   Round 3    │  <-- Hire/No-Hire Recs & Customized Interview Qs
-   └──────────────┘
+    JD --> Dense
+    JD --> Sparse
+    Filters --> Quals
+    Dense --> Combined
+    Sparse --> Combined
+    Quals --> Combined
 ```
 
----
+### A. Algorithmic Breakdown
 
-## 5. Conversational UX & Streamlit Interface
+1. **Min-Max Normalized Vector Similarity**:
+   - *Problem*: Raw cosine distance in embedding spaces clusters tightly (e.g. `0.35`–`0.55`), causing top candidates to receive artificially deflated scores.
+   - *Engineering Solution*: Map the closest vector in the retrieved batch to `1.0` (100% similarity) and scale linearly down to `0.50` for the furthest vector:
+     ```python
+     # Scales nearest match to 1.0 and furthest to 0.50
+     norm_sim = 1.0 - 0.5 * ((dist - min_dist) / max(1e-5, max_dist - min_dist))
+     semantic_score = max(0.0, min(1.0, norm_sim))
+     ```
 
-The system implements a **Streamlit-based GUI** rather than a standard CLI or Gradio interface. Streamlit is selected for the following reasons:
-1. **Rich Tabular Layouts**: Recruiting requires reviewing complex tables (like head-to-head candidate matrices) and multi-column comparison grids that are unreadable in CLI terminal output.
-2. **Visual Dashboarding**: It allows splitting the screen into a *Sidebar* (displaying active job requirements, filters, and state metrics) and a *Main Panel* (containing the chat conversation and candidate reports).
-3. **Sleek Chat Widgets**: Streamlit provides native `st.chat_message` and `st.chat_input` widgets that interface cleanly with the chat history.
-4. **Structured Card Model Layout**: Candidate details are mapped dynamically into a structured metadata template displaying scores, experience metrics, education levels, and matched skills tags directly to support interactive workflows.
+2. **Stop-Word Filtered BM25 Keyword Search**:
+   - *Problem*: High-frequency recruiting noise tokens (`"looking"`, `"for"`, `"years"`, `"experience"`) distort BM25 term frequency calculations.
+   - *Engineering Solution*: Filter queries against a curated stop-word set before querying the cached in-memory `BM25Okapi` sparse matrix:
+     ```python
+     stop_words = {"the", "and", "for", "with", "looking", "years", "exp", ...}
+     tokens = [w for w in re.findall(r"\b\w+\b", query.lower()) if len(w) > 1 and w not in stop_words]
+     bm25_score = bm25_index.get_scores(tokens)[chunk_idx] / max_bm25_score
+     ```
 
-The interface maintains conversational state session-by-session, interacting with the LangGraph state machine backend.
+3. **Dynamic Weight Allocation**:
+   The engine automatically adapts component weights based on whether explicit must-have skills or experience bounds are supplied:
 
-
-### User Interaction Flows:
-1. **Incremental Refinement**:
-   - If a user inputs: *"Filter out candidates who don't know Docker"*, the agent transitions back to `adjust_requirements_node`.
-   - The agent updates `requirements["must_have_skills"]` to append `"Docker"`.
-   - The graph triggers re-retrieval and re-evaluation.
-2. **Context-Aware Comparison Queries**:
-   - Queries like *"Why did Marcus rank higher than Jane?"* are processed by retrieving both profiles from `AgentState["shortlist"]` and passing them to an explanation prompt that contrasts their relative match metrics (semantic similarity scores, skills coverage, and experience years).
-
----
-
-## 6. Explainability & Reporting Engine
-
-The agent builds detailed reporting structures to ensure transparent, auditable recruiting decisions:
-
-### A. Candidate Match Report Template
-For each shortlisted profile, the agent generates a report containing:
-- **Profile Summary**: Core stats (Name, Degree, Experience Years).
-- **Match Diagnostics**: Semantic score vs keyword overlap.
-- **Strengths**: Proven experience blocks aligning with must-haves.
-- **Gaps**: Missing skills or lack of domain exposure.
-- **Improvement Suggestions**: Actionable recommendations for borderline candidates (e.g. *"Acquiring a basic certification in AWS would bridge the cloud engineering requirement gap."*).
-
-### B. Side-by-Side Comparison Matrix
-A clean markdown table comparing candidates side-by-side:
-
-| Match Category | Candidate A (e.g., Emily Watson) | Candidate B (e.g., John Doe) |
-|---|---|---|
-| **Match Score** | **83** | **71** |
-| **Experience** | 8 Years (Stanford M.S.) | 5 Years (Georgia Tech M.S.) |
-| **Core Strengths** | Container Orchestration (K8s/Docker), FastAPI | Web API development, PostgreSQL |
-| **Missing Core Skills**| None | Kubernetes |
-| **Decision Status** | **Strong Hire** | **Borderline Hire** |
+   | Scenario | Raw Hybrid (60% Dense + 40% Sparse) | Skill Match Ratio | Experience Satisfaction |
+   |:---|:---:|:---:|:---:|
+   | **With Must-Have Skills** | **50%** | **35%** | **15%** |
+   | **General Semantic Search (No Must-Haves)** | **85%** | **0%** | **15%** |
+   | **Zero Constraints Specified** | **100%** | **0%** | **0%** |
 
 ---
 
-## 7. Standalone Architecture & Free Model APIs
+## 5. Tooling Layer & Model Context Protocol (MCP)
 
-### A. Standalone Codebase & Replication Strategy
-To make the Agentic Profile Matching Engine completely independent and production-grade, the files and functionalities from Milestone 1 and Milestone 2 have been structured under the `src/agentic_profile_matching/` packaged namespace:
-- **`fs_tools.py`**: Multi-format document reader (TXT, DOCX, PDF) featuring **PyMuPDF** (`fitz`) layout-sorted multi-column text extraction, opt-in **Unstructured.io** PDF partitioning (`USE_UNSTRUCTURED=True`), and `pypdf` fallbacks.
-- **`config.py`, `resume_rag.py`, `job_matcher.py`, `generate_dataset.py`** (Milestone 2): Ingestion, RAG chunking, ChromaDB vector storage, BM25 indexing, and hybrid matching.
-- **`agent/` package** (LangGraph Orchestration): Decoupled package separating state definitions (`state.py`), prompt structures (`prompts.py`), router files (`routers.py`), nodes logic (`nodes.py`), and graph compiler (`__init__.py`).
-- **Clean Absolute Imports**: All modules import each other using standard absolute package-level imports (e.g. `from agentic_profile_matching import config`).
-- **No Path Dependencies**: This eliminates cross-project `sys.path` modifications, ensuring this codebase runs fully standalone and does not break or affect the original Milestone 1 & 2 directories.
+The engine implements a **Dual-Mode Gateway Architecture** (ADR-001) toggled dynamically via `config.USE_MCP`:
 
+```mermaid
+graph LR
+    Agent[LangGraph Nodes] --> Gateway[fs_client.py Gateway]
+    
+    subgraph DirectMode ["Local Mode (USE_MCP=False)"]
+        Gateway --> InProcess["Direct in-process call<br/>(fs_tools.py, job_matcher.py)"]
+    end
 
+    subgraph MCPMode ["MCP Protocol Mode (USE_MCP=True)"]
+        Gateway --> Manager["mcp_client.py ClientSession Manager"]
+        Manager --> StdioTransport["stdio JSON-RPC 2.0 Transport"]
+        StdioTransport --> FSServer["filesystem_mcp_server.py (FastMCP)"]
+        StdioTransport --> SearchServer["search_mcp_server.py (FastMCP)"]
+    end
+```
 
-### B. Free-Tier API & Open-Source LLM Stack
-The system operates on 100% free or open-source tiers to guarantee zero runtime costs:
-1. **Embeddings & Vector Database**: Local `sentence-transformers/all-MiniLM-L6-v2` embeddings and local, self-hosted `ChromaDB` storage.
-2. **LLM Orchestration Layer**: The LangGraph workflow is designed to connect to the following free developer API options:
-   - **Groq API** (Free Tier): Utilizing fast models like `openai/gpt-oss-120b` or `qwen/qwen3.6-27b`.
-   - **Google Gemini API** (Free Developer Plan / Gemini Pro): Offering large context windows and strong reasoning for candidate comparison and screening report generation.
-3. **Execution Safety**: API keys are loaded locally from environment variables (`GROQ_API_KEY`, `GEMINI_API_KEY`) via a `.env` file, ensuring private and secure operation.
-
-### C. Rate Limit & Token Usage Management
-To proactively prevent 429 rate limit exceptions and TPM/RPM exhaustion on free API tiers, the engine implements five layers of safeguards:
+### Exposed Protocol Tools & Resources
+- **Filesystem Server (`filesystem_mcp_server.py`)**:
+  - Tools: `list_files`, `read_file`, `search_in_file`.
+  - Resources: `resumes://all`, `resumes://{filename}`.
+  - Background Watcher: `FileSystemWatcher` triggers auto-ingestion on directory file modifications.
+- **Search Server (`search_mcp_server.py`)**:
+  - Tools: `search_web` (Tavily API search with fallback mock profiles), `search_candidates` (ChromaDB vector lookup), `fetch_candidate_notes` (Internal HR screening file fetcher).
 
 ---
 
-## 8. Structured Logging & Observability Pipeline
+## 6. Distributed Task Queue (Celery + Redis)
 
-To provide production-grade trace correlation, performance monitoring, and log structure, the engine includes a dedicated observability module (`src/agentic_profile_matching/observability.py`):
+For production deployments handling bulk document parsing and parallel LLM audits, the engine provides an asynchronous task processing layer via **Celery** and **Redis** (ADR-006):
 
-1. **`JsonFormatter`**: Renders all log messages as single-line, structured JSON objects containing standard fields (`timestamp`, `level`, `logger`, `message`) along with optional trace fields (`event`, `node`, `elapsed_ms`, `exception`).
-2. **`get_logger(name)`**: Configures application loggers with structured formatting, preventing duplicate handler attachments and providing log level filtering (`LOG_LEVEL=INFO`).
-3. **`@trace_node(node_name)` Decorator**: Instruments LangGraph nodes (`extract_requirements`, `search_resumes`, `rank_candidates`, `deep_screen`, `recommendation`, `generate_report`, `adjust_requirements`, `conversational_query`, `parse_input`), measuring execution latency in milliseconds and logging structured `node_start`, `node_end`, and `node_error` events.
-4. **Pluggable Tracing Backends**: Supports opt-in integration via `OBSERVABILITY_BACKEND` environment configuration:
-   - **`none`** (default): Standard structured JSON logging to `stdout`.
-   - **`langfuse`**: Dynamically decorates node execution via `@observe(name=node_name)`, exporting traces to Langfuse Cloud/self-hosted instances without modifying graph node code.
-   - **`opentelemetry`**: Wraps node execution in an OpenTelemetry span (`tracer.start_as_current_span(node_name)`), recording node metrics and latency attributes.
+```mermaid
+graph LR
+    subgraph Producers ["Task Producers"]
+        WebUI["Streamlit Web App"]
+        MCPServer["MCP Tool Handlers"]
+    end
+
+    subgraph Broker ["Redis 7 Broker & State Backend"]
+        RedisQueue["Redis Queue (Port 6379)<br/>Task Serialization & Celery Result Backend"]
+    end
+
+    subgraph Workers ["Celery Worker Pool"]
+        Worker1["Celery Worker Process 1<br/>(async_ingest_directory)"]
+        Worker2["Celery Worker Process 2<br/>(async_deep_screen_candidate)"]
+    end
+
+    subgraph Storage ["Persistent Stores"]
+        VectorDB["ChromaDB / Qdrant"]
+    end
+
+    Producers -->|"delay() / apply_async()"| RedisQueue
+    RedisQueue --> Workers
+    Workers --> VectorDB
+```
+
+- **`async_ingest_directory`**: Background document chunking, PyMuPDF extraction, and idempotent vector upserting.
+- **`async_deep_screen_candidate`**: Parallel LLM candidate audits with rate-limited task batching.
+- **Docker Compose Topology**: Multi-container setup orchestrating `app` (Streamlit port 8501), `redis` (port 6379), and `celery_worker`.
+
+---
+
+## 7. Production Observability & Evaluation
+
+### A. Structured JSON Logging & Node Tracing
+Every workflow execution is instrumented via structured JSON logging and the `@trace_node` decorator:
 
 ```json
 {
-  "timestamp": "2026-08-09 14:50:00,000",
+  "timestamp": "2026-08-14 17:00:12,345",
   "level": "INFO",
-  "logger": "agentic_profile_matching.node.deep_screen",
-  "message": "Completed node execution: deep_screen in 245.5ms",
+  "logger": "agentic_profile_matching.node.rank_candidates",
+  "message": "Completed node execution: rank_candidates in 1.24ms",
   "event": "node_end",
-  "node": "deep_screen",
-  "elapsed_ms": 245.5
+  "node": "rank_candidates",
+  "elapsed_ms": 1.24,
+  "thread_id": "session-4247cca1"
 }
 ```
 
+### B. Pluggable Observability Backends
+- **Langfuse (`OBSERVABILITY_BACKEND=langfuse`)**: Captures complete execution traces, token usage, LLM input/output payloads, and latency waterfalls.
+- **OpenTelemetry (`OBSERVABILITY_BACKEND=opentelemetry`)**: Emits standard OTLP spans for enterprise APM platforms (Datadog, Dynatrace, AWS CloudWatch).
 
-1. **Tiered Cascading Pipeline**: 
-   - **Round 1 (Coarse Filtering)** is executed 100% locally using Sentence Transformers and BM25 indexing (costing 0 API requests and 0 LLM tokens). This narrows the search space from 100+ resumes down to the Top 10.
-   - **Round 2 & 3 (Deep Analysis & Recommendations)** are only executed on the narrowed candidates (Top 10 and Top 5 respectively).
-2. **Sequential Requests Throttling**: A delay (`config.THROTTLE_DELAY = 1.5` seconds) is enforced between sequential LLM screening calls to space out queries and stay under RPM limits.
-3. **Token Input Truncation**: Resume texts are truncated to a safe maximum length of 12,000 characters (approx. 3,000 tokens) before prompt generation to prevent TPM spikes.
-4. **Compact Structured Outputs**: Node prompts enforce concise JSON structures, keeping output tokens under ~200 per call.
-5. **Exponential Backoff Retry**: Every LLM function is wrapped in `execute_with_retry`, which catches 429 errors and retries with doubling delays (up to 5 attempts).
-
----
-
-## 8. Model Context Protocol (MCP) & Resiliency Design
-
-The engine features a standardized **Model Context Protocol (MCP)** implementation and comprehensive **production-grade resiliency safeguards** to protect against runtime exceptions, API downtime, or uninitialized state constraints.
-
-### A. Dual-Mode Tool Gateway Architecture
-The system supports a **dual-mode architecture** toggled via `config.USE_MCP` (`USE_MCP=True/False` in `.env` / `config.py`):
-1. **Local/Direct Mode (Default)**: Imports and runs the filesystem utilities synchronously. Requires no background server subprocesses, making local CLI/Streamlit development simple and lightweight.
-2. **MCP Mode**: Launches the filesystem server and search server as subprocesses and routes all file/search transactions through standardized JSON-RPC 2.0 protocol calls.
-
-```mermaid
-graph TD
-    User[Streamlit UI / CLI] --> Agent[matching_agent.py]
-    Agent --> Gateway[fs_client.py: Unified Gateway]
-    
-    Gateway -- Mode: Local --x DirectTools[fs_tools.py: Direct Execution]
-    Gateway -- Mode: MCP --x ClientManager[mcp_client.py: Thread-Safe Client]
-    
-    ClientManager -- stdio (JSON-RPC) --x ServerFS[filesystem_mcp_server.py]
-    ClientManager -- stdio (JSON-RPC) --x ServerSearch[search_mcp_server.py]
-```
-
-### B. MCP Server Specifications
-- **`filesystem_mcp_server.py`**: Built using FastMCP. Registers all Milestone 1 tools (`read_file`, `list_files`, `write_file`, and `search_in_file`). Delegates ingestion business logic to the `IngestionService` boundary:
-  - **`IngestionService` (`services/ingestion_service.py`)**: Encapsulates single-file (`ingest_file`) and directory (`ingest_directory`) RAG ingestion mechanics, cleanly separating protocol handlers from vector database operations. Leverages section-scoped deterministic chunk IDs (`{filename}_{section}_{index}`) to prevent chunk duplication or orphaned chunks upon re-ingestion.
-  - **Pluggable Vector Store & Store Injection (`stores/`)**: Implements structural subtyping via `BaseVectorStore` `typing.Protocol` (`stores/base.py`) providing a unified engine-agnostic interface (`upsert`, `query`, `get_all`, `count`). Supports constructor injection into `ResumeRAGPipeline`, `JobMatcher`, `IngestionService`, and node graph configuration (`config["configurable"]["store"]`).
-  - **BM25 Corpus Index Caching**: `JobMatcher` caches tokenized corpus BM25 Okapi structures in memory, employing MD5 fingerprint invalidation based on document count and sample content hashes to avoid costly O(n) re-tokenization per search query.
-  - **`watch_directory(directory)`**: Spawns a background watcher thread to monitor directory changes and trigger incremental auto-ingestion via `IngestionService.ingest_file()`.
-  - **`batch_process(filepaths)`**: Concurrently reads and parses multiple files using a `ThreadPoolExecutor` to speed up candidate loads.
-  - **`resumes://{filename}` Namespace**: Standardized MCP Resource namespace permitting clients to read file contents directly from the server.
-- **`search_mcp_server.py`**: Exposes search tools to demonstrate multi-server coordination and candidate vetting:
-  - **`search_web(query)`**: Integrates live web search using the `tavily-python` library. Leverages structured mock fallback portfolios for sandbox/training candidates who are fictional, and queries public portals in real time for general searches.
-  - **`search_chroma_db(query, limit)`**: Connects via `ChromaVectorStore` to run semantic searches directly over resumes, returning candidate excerpts, section metadata, and similarity scores.
-  - **`fetch_candidate_notes(candidate_name)`**: Fetches internal screening and HR notes.
-
-### C. Persistent Connection Client Manager
-Because MCP is inherently asynchronous (`asyncio`) and LangGraph workflow nodes/Streamlit run synchronously, the client manager (`mcp_client.py`) acts as a bridge:
-- Starts a dedicated background event loop running in a daemon thread.
-- Resolves python paths and launches both server processes on loop start, retaining persistent `ClientSession` connections to avoid the heavy overhead of spawning processes on every tool call.
-- Synchronously schedules coroutines on the loop using `asyncio.run_coroutine_threadsafe()` and returns results.
-- Registers an `atexit` cleaner to guarantee that all subprocesses are cleanly killed on exit, preventing orphan processes.
-
-### D. Production Resiliency Safeguards
-- **Agent State Logger**: Added `errors: List[str]` to `AgentState`. Workflow nodes intercept errors, record them in the log, and fallback gracefully instead of halting execution.
-- **Node Failures & Fallbacks**: If the LLM provider experiences downtime or deep screening fails, the agent populates placeholder assessments (e.g. `strengths=["Semantic match overlap"]`, `gaps=["Deep screening audit skipped due to LLM error"]`) so the UI displays fallback candidate profiles rather than blank cards.
-- **Database Safety**: Wrapped ChromaDB collection loading in a try-except block in `JobMatcher`. If the collection is missing, it is automatically created to prevent crash loops.
-- **Experience Parsing Validation**: Restricts parsed experience years to `0-50` to discard postcodes or phone numbers that occasionally match the experience regex.
-- **Streamlit Warning System**: If any error logs are populated during an agent run, `app.py` catches them and renders explicit yellow `st.warning` boxes under the header.
+### C. RAG Evaluation Benchmark Suite
+Automated evaluation pipelines (`tests/eval/`) run against ground-truth scenarios (`data/eval_scenarios.json`) measuring:
+1. **Retrieval Recall@K**: Proportion of ground-truth relevant profiles retrieved in the top $K$ candidates.
+2. **Mean Reciprocal Rank (MRR)**: Precision of the top-ranked ground-truth profile position.
+3. **Response Faithfulness**: Verification that LLM screening summaries strictly reflect extracted candidate resume text with zero hallucinated skills or experiences.
 
 ---
 
-## 5. Background Asynchronous Processing & Containerization
+## 8. AI Safety, Guardrails & Production Resilience
 
-### A. Celery + Redis Task Queue Architecture
-For production deployments requiring non-blocking handling of bulk resume ingestion and compute-intensive candidate deep screening, the engine incorporates an asynchronous task processing layer via **Celery** and **Redis**:
-
-```
-+-------------------+        Celery Tasks        +----------------------+
-|  Streamlit App /  |  =======================>  |    Celery Worker     |
-|   MCP Server      |      (Redis Broker)        |     (tasks.py)       |
-+-------------------+                            +----------------------+
-          |                                                 |
-          v                                                 v
-  +---------------+                              +----------------------+
-  |  Redis Broker | <==========================> | ChromaDB / Vector    |
-  | (Port 6379)   |     Task State & Result      |      Store DB        |
-  +---------------+          Backend             +----------------------+
-```
-
-- **Tasks Module (`tasks.py`)**: Defines `async_ingest_directory` for background document chunking and vector indexing, and `async_deep_screen_candidate` for parallel LLM candidate audits.
-- **Worker App (`celery_app.py`)**: Celery app instance configured with JSON serialization, 300s task time limits, and task state tracking.
-
-### B. Docker Compose Containerization
-The repository includes a production multi-container setup via `docker-compose.yml`:
-- `redis`: Redis 7 Alpine image on port `6379` providing broker and result storage.
-- `app`: Streamlit web app container built via multi-stage Python 3.12 `Dockerfile` exposing port `8501`.
-- `celery_worker`: Background Celery task worker running `celery -A agentic_profile_matching.celery_app worker`.
-
----
-
-## 9. Production-Grade Quality Standards & Guardrails
-
-To prevent LLM hallucinations, arbitrary score cutoffs, and brittle evaluation logic, the engine enforces 4 production-grade guardrail standards:
-
-1. **Dynamic Multi-Factor Scoring Model**
-   - Candidate match scores ($0 - 100$) are calculated in `job_matcher.py` by dynamically combining min-max normalized vector similarity, stop-word filtered BM25 keyword matching, mandatory skill coverage ratio, and experience satisfaction ratio.
-   - Prevents artificial score compression and handles arbitrary open-ended queries cleanly.
-
-2. **Grounded LLM Decision Hierarchy**
-   - Prioritizes LLM deep screening status assessments (`"Strong Hire"`, `"Borderline Hire"`, `"Rejected / No-Hire"`) generated during full resume text audits in `deep_screen_node`.
-   - Enforces hard safety guardrails in `recommendation_node` (e.g. overriding status to `Rejected / No-Hire` if mandatory skills or minimum experience are missing).
-
-3. **Fact-Grounded Prompting**
-   - Explicitly passes candidate ground-truth metadata (`Experience Years`, `Matched Skills`, `Missing Skills`) into all report explanation prompts.
-   - Prohibits LLM prompt hallucinations (e.g., claiming a candidate lacks experience when their experience meets requirements).
-
-4. **100% Ingestion & State Idempotency**
-   - Document chunking uses section-scoped deterministic chunk keys (`{filename}_chunk_{idx}`) for idempotent vector store `upsert()`.
-
----
-
-## 10. Project Roadmap & Development Standards
-
-- **Implementation Roadmap**: Phased implementation plan, current progress status (tracked with emojis `✅`, `⏳`, `⬜`), and future backlog are maintained in [ROADMAP.md](../ROADMAP.md).
-- **Engineering Conventions**: Architectural design principles, Pydantic V2 schemas, state immutability, and resilience bounds are documented in [CONVENTIONS.md](../CONVENTIONS.md).
-- **Contributing Guidelines**: Environment setup, running unit tests (`pytest`), Ruff linter checks, and PR submission checklist are in [CONTRIBUTING.md](../CONTRIBUTING.md).
-
----
-
+1. **Grounded Recommendation Hierarchy**: Preserves qualitative LLM deep screening status assignments (`"Strong Hire"`, `"Borderline Hire"`, `"Rejected / No-Hire"`) while enforcing deterministic overrides if mandatory qualifications are unmet.
+2. **Fact-Grounded Prompt Engineering**: Passes explicit candidate ground-truth metrics (`Experience Years`, `Matched Skills`, `Missing Skills`) into all report explanation prompts, forbidding ungrounded claims.
+3. **Exponential Backoff & Rate Limit Handling**: All LLM invocations are wrapped in `execute_with_retry` catching HTTP 429 exceptions with exponential backoff (up to 5 retries).
+4. **Token Truncation Budgeting**: Candidate resume inputs are capped at 12,000 characters (~3,000 tokens) with concise structured JSON output constraints, eliminating TPM/RPM exhaustion.
+5. **Ingestion Idempotency**: Deterministic chunk IDs (`{filename}_chunk_{idx}`) prevent vector store bloat across repeated ingestion runs.

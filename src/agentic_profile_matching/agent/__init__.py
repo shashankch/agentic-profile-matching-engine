@@ -83,3 +83,6 @@ def generate_diagrams():
     except Exception as e:
         print(f"Note: Could not generate visual PNG diagram. Error: {e}")
         print("Mermaid representation is still saved, which can be rendered in markdown.")
+
+
+__all__ = ["matching_agent_workflow", "AgentState", "builder"]

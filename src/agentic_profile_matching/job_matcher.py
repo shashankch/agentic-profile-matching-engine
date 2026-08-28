@@ -101,13 +101,38 @@ class JobMatcher:
         if results and "ids" in results and len(results["ids"]) > 0:
             res_ids = results["ids"][0]
             res_distances = results["distances"][0]
+            min_dist = min(res_distances) if res_distances else 0.0
+            max_dist = max(res_distances) if res_distances else 1.0
+            dist_range = (max_dist - min_dist) if (max_dist - min_dist) > 1e-5 else 1.0
             for r_id, dist in zip(res_ids, res_distances):
-                # Cosine distance to similarity: 1.0 - (dist / 2.0)
-                sim = 1.0 - (dist / 2.0)
+                # Min-Max normalized vector similarity: maps closest match to 1.0 down to 0.5 for furthest
+                sim = 1.0 - 0.5 * ((dist - min_dist) / dist_range)
                 semantic_scores_dict[r_id] = max(0.0, min(1.0, sim))
 
-        # 2. Keyword Search using cached BM25
-        tokenized_query = job_description.lower().split()
+        # 2. Keyword Search using cached BM25 with stop-word filtering
+        stop_words = {
+            "the",
+            "and",
+            "for",
+            "with",
+            "that",
+            "this",
+            "from",
+            "you",
+            "are",
+            "have",
+            "looking",
+            "years",
+            "year",
+            "exp",
+            "experience",
+        }
+        tokenized_query = [
+            w for w in re.findall(r"\b\w+\b", job_description.lower()) if len(w) > 1 and w not in stop_words
+        ]
+        if not tokenized_query:
+            tokenized_query = job_description.lower().split()
+
         bm25_scores = bm25.get_scores(tokenized_query)
 
         # Normalize BM25 scores
@@ -136,9 +161,26 @@ class JobMatcher:
             # Compute combined hybrid score: 60% semantic + 40% keyword
             semantic_score = semantic_scores_dict.get(doc_id, 0.5)
             bm25_score = normalized_bm25_scores[chunk_idx]
+            raw_hybrid = 0.6 * semantic_score + 0.4 * bm25_score
 
-            hybrid_score = 0.6 * semantic_score + 0.4 * bm25_score
-            score_100 = max(0, min(100, int(hybrid_score * 100)))
+            candidate_skills_str = meta.get("skills", "")
+            candidate_skills = [s.strip().lower() for s in candidate_skills_str.split(",") if s.strip()]
+
+            # Dynamic weighting: adapts based on presence of must-have skills and experience constraints
+            if must_have_skills:
+                matched_must_count = sum(1 for s in must_have_skills if s.lower() in candidate_skills)
+                skill_ratio = matched_must_count / len(must_have_skills)
+                exp_ratio = (
+                    1.0 if (min_exp == 0 or candidate_exp >= min_exp) else max(0.5, candidate_exp / max(1, min_exp))
+                )
+                final_score_norm = (0.50 * raw_hybrid) + (0.35 * skill_ratio) + (0.15 * exp_ratio)
+            elif min_exp > 0:
+                exp_ratio = 1.0 if candidate_exp >= min_exp else max(0.5, candidate_exp / max(1, min_exp))
+                final_score_norm = (0.80 * raw_hybrid) + (0.20 * exp_ratio)
+            else:
+                final_score_norm = raw_hybrid
+
+            score_100 = max(0, min(100, int(final_score_norm * 100)))
 
             resume_path = meta.get("resume_path")
             if resume_path not in candidate_matches:

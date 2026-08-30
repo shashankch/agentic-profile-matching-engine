@@ -5,12 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-30
+### Added
+- Implemented **Tiered Production Hybrid Router** in `src/agentic_profile_matching/agent/routers.py` combining Tier 1 local SentenceTransformer vector similarity (< 2ms, 0 API cost) with Tier 2 LLM structured intent classification fallback (`with_structured_output(RouteDecision)`).
+- Published **ADR-009: Tiered Semantic Embedding & LLM Structured Intent Routing** in `docs/adr/`.
+- Added **Sarvam AI** (`sarvam-105b`, `sarvam-2b`) as a first-class LLM provider with native OpenAI-compatible API bridge in `config.py` and Streamlit UI.
+- Published **ADR-010: Multi-Provider LLM Abstraction with Sarvam AI Indic Model Integration** in `docs/adr/`.
+- Upgraded agent tools with LangChain native `with_structured_output` schema enforcement and multi-tier balanced-bracket JSON repair in `tools.py`.
+- Added unit test suites in `tests/test_routers.py` and `tests/test_config.py`.
+
 ## [1.0.0] - 2026-08-12
 ### Added
 - Implemented production-grade **Multi-Factor Hybrid Candidate Scoring** in `job_matcher.py` combining min-max normalized vector similarity, stop-word filtered BM25 keyword matching, mandatory skill coverage ratio, and experience satisfaction ratio.
 - Established grounded **LLM Recommendation Hierarchy** in `recommendation_node` that preserves LLM deep screening status assessments while enforcing hard mandatory safety guardrails (missing skills / experience deficits).
-- Created **ADR-008: Multi-Factor Hybrid Candidate Scoring & Grounded LLM Recommendation Hierarchy** in `docs/ARCHITECTURE_DECISIONS.md`.
-- Published 8 formal Architecture Decision Records (ADRs 001–008) in `docs/ARCHITECTURE_DECISIONS.md`.
+- Created **ADR-008: Multi-Factor Hybrid Candidate Scoring & Grounded LLM Recommendation Hierarchy** in `docs/adr/`.
+- Published formal Architecture Decision Records (ADRs 001–008) in `docs/adr/`.
 - Updated package `__all__` exports across `stores`, `services`, and `agent` packages for complete production closeout.
 
 ## [0.9.4] - 2026-08-12

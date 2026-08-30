@@ -228,6 +228,8 @@ if llm_provider == "Groq":
     default_key = os.getenv("GROQ_API_KEY", "")
 elif llm_provider == "Gemini":
     default_key = os.getenv("GEMINI_API_KEY", "")
+elif llm_provider == "Sarvam AI":
+    default_key = os.getenv("SARVAM_API_KEY", "")
 elif llm_provider == "OpenAI":
     default_key = os.getenv("OPENAI_API_KEY", "")
 

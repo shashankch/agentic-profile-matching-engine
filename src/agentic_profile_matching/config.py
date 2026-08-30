@@ -27,18 +27,19 @@ SUPPORTED_PROVIDERS = {
         "mixtral-8x7b-32768",
     ],
     "Gemini": ["gemini-1.5-pro", "gemini-1.5-flash"],
+    "Sarvam AI": ["sarvam-105b", "sarvam-2b"],
     "OpenAI": ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
     "Custom (OpenAI-compatible)": ["custom-model"],
 }
 
 DEFAULT_PROVIDER = os.getenv("DEFAULT_PROVIDER", "Groq")
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "openai/gpt-oss-120b")
-THROTTLE_DELAY = float(os.getenv("THROTTLE_DELAY", "1.5"))  # Delay in seconds to prevent hitting LLM rate limits
+THROTTLE_DELAY = float(os.getenv("THROTTLE_DELAY", "0.5"))  # Delay in seconds between candidate screening calls
 
 # Default Candidate Processing Limits
 DEFAULT_COARSE_LIMIT = int(os.getenv("DEFAULT_COARSE_LIMIT", "10"))
-DEFAULT_DEEP_LIMIT = int(os.getenv("DEFAULT_DEEP_LIMIT", "10"))
-DEFAULT_RECOMMENDATION_LIMIT = int(os.getenv("DEFAULT_RECOMMENDATION_LIMIT", "5"))
+DEFAULT_DEEP_LIMIT = int(os.getenv("DEFAULT_DEEP_LIMIT", "5"))
+DEFAULT_RECOMMENDATION_LIMIT = int(os.getenv("DEFAULT_RECOMMENDATION_LIMIT", "3"))
 RESUME_TRUNCATION_LIMIT = int(os.getenv("RESUME_TRUNCATION_LIMIT", "12000"))
 
 # MCP Protocol Configuration
@@ -78,6 +79,14 @@ def get_llm_model(provider: str, model_name: str, api_key: str, api_url: Optiona
         from langchain_google_genai import ChatGoogleGenerativeAI
 
         return ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key)
+    elif provider == "Sarvam AI":
+        from langchain_openai import ChatOpenAI
+
+        return ChatOpenAI(
+            model=model_name,
+            api_key=api_key,
+            base_url="https://api.sarvam.ai/v1",
+        )
     elif provider == "OpenAI":
         from langchain_openai import ChatOpenAI
 

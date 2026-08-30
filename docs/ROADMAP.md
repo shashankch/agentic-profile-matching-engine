@@ -1,90 +1,109 @@
 # Agentic Profile Matching Engine: Project Roadmap
 
-This document outlines the phased plan for building the Agentic Profile Matching Engine, along with key upcoming backlog features.
+This document outlines the strategic milestones for the **Agentic Profile Matching Engine**. 
+
+> 💡 **Implementation Note**: Detailed technical task breakdowns, file modification maps, and code patterns are maintained in [`internal/implementation_plan.md`](../internal/implementation_plan.md) and individual [Architecture Decision Records (ADRs)](adr/README.md).
 
 ---
 
-## 📍 Core Implementation Phases
+## 📍 Implementation Milestones
 
-1. **Phase 1: Environment & Setup** ✅
-   - Install dependencies (`[langgraph]`, `[streamlit]`, `[langchain-groq]`, `[langchain-google-genai]`).
-   - Create a local `.env` file for credentials (`GROQ_API_KEY`, `GEMINI_API_KEY`).
+### Phase 1: Environment & Foundational Setup ✅ (`v0.1.0`)
+- Core package environment initialization with LangGraph, Streamlit, Groq, and Google GenAI.
+- Secure environment configuration via `.env` credentials.
 
-2. **Phase 2: Dataset Ingestion & Retrieval** ✅
-   - Generate synthetic candidate resume files (PDF, DOCX, TXT).
-   - Ingest files, generate local embeddings, and populate [ChromaDB] / BM25 indexes.
+### Phase 2: Ingestion & Vector Indexing Subsystem ✅ (`v0.2.0`)
+- Multi-format synthetic candidate dataset generation (PDF, DOCX, TXT).
+- Document ingestion pipeline with local SentenceTransformers embeddings and ChromaDB vector indexing.
 
-3. **Phase 3: LangGraph Agent & State Machine** ✅
-   - Design the `AgentState` schema and setup conversational graph memory.
-   - Implement workflow nodes (parsing, search, deep screening, report generation, and human feedback interrupts).
+### Phase 3: LangGraph Agent & Conversational State Machine ✅ (`v0.3.0`)
+- 9-node `StateGraph` workflow with deterministic state transitions and `MemorySaver` checkpointing.
+- End-to-end recruiter loop (parsing, search, deep screening, report generation, conversational adjustment).
 
-4. **Phase 4: Assessment & Screening Tools** ✅
-   - Build custom agent tools for requirements extraction, multi-profile side-by-side comparison matrices, and candidate-specific interview question generation.
+### Phase 4: Assessment, Comparison & Screening Tools ✅ (`v0.4.0`)
+- Schema-validated requirement extraction and multi-profile side-by-side comparison matrices.
+- Fact-grounded candidate interview question generation tailored to identified skill gaps.
 
-5. **Phase 5: Streamlit UI & End-to-End Validation** ✅
-   - Create the frontend dashboard (`app.py`) for dual-pane chat and shortlist inspection.
-   - Test conversational refinement loops against test recruitment scenarios.
+### Phase 5: Streamlit Recruiter Dashboard ✅ (`v0.5.0`)
+- Interactive dual-pane recruiter UI (`app.py`) for live conversation and shortlist inspection.
+- Conversational refinement workflow testing against recruitment scenarios.
 
-6. **Phase 6: MCP Server & Client Integration** ✅
-   - Implement [FastMCP] filesystem server (`filesystem_mcp_server.py`) exposing files and resource namespaces (`resumes://`).
-   - Add secondary search server (`search_mcp_server.py`) coordinating live web queries and ChromaDB vector calls.
-   - Create synchronous async-bridged manager client (`mcp_client.py`) and unified gateway client (`fs_client.py`).
+### Phase 6: Model Context Protocol (MCP) Integration ✅ (`v0.6.0`)
+- FastMCP filesystem (`resumes://`) and candidate search stdio protocol servers.
+- Thread-safe dual-mode gateway client (`USE_MCP=True/False`) supporting local in-process and JSON-RPC execution ([ADR-001](adr/ADR-001-mcp-dual-mode-gateway-architecture.md)).
 
-7. **Phase 7: Modular Graph Refactoring & Codebase Resilience** ✅
-   - Break down monolithic 833-line agent file into decoupled packaged folder `agent/` (`state.py`, `prompts.py`, `nodes.py`, `routers.py`, `__init__.py`).
-   - Add try-except bounds, capped experience extraction validation, and warning alert flags in state.
-   - Integrate automated local pre-commit hooks and GitHub Actions CI code quality lints using [Ruff].
+### Phase 7: Modular Graph Decoupling & Linting Hygiene ✅ (`v0.7.0`)
+- Decomposed monolithic agent into a decoupled `agent/` package (`state.py`, `prompts.py`, `nodes.py`, `routers.py`).
+- Automated pre-commit hooks and GitHub Actions CI quality gates with Ruff.
 
-8. **Phase 8: Enterprise Abstractions & Background Workers** ✅
-   - **8.1 — Protocol / Business Logic Separation** ✅: Introduce a dedicated `IngestionService` layer to cleanly decouple file-processing business logic from the MCP protocol tool handlers.
-   - **8.2 — Pluggable Vector Store Abstraction** ✅: Define a `BaseVectorStore` protocol, implement a default `ChromaVectorStore` with idempotent upsert ingestion and deterministic chunk IDs, and add a `QdrantVectorStore` stub to validate the abstraction boundary.
-   - **8.3 — Store Injection & BM25 Index Caching** ✅: Wire `BaseVectorStore` into `ResumeRAGPipeline` and `JobMatcher` via constructor injection; cache the BM25 corpus index on construction to eliminate per-query O(n) rebuilds.
-   - **8.4 — Type-Safe State Migration & Security Hardening** ✅: Migrate `AgentState` to `TypedDict`; migrate LLM output schemas to Pydantic V2 `BaseModel`; remove API credentials from serializable graph state.
-   - **8.5 — Pydantic V2 LLM Output Contracts** ✅: Replace fragile regex-based JSON parsing of LLM responses with Pydantic V2 `model_validate_json()` with graceful fallback.
-   - **8.6 — Celery + Redis Background Workers** ✅: Implement [Celery] + [Redis] async task queue for non-blocking deep screening and background ingestion; add Docker Compose orchestration.
+### Phase 8: Enterprise Abstractions & Background Workers ✅ (`v0.8.0` – `v0.8.6`)
+- **Protocol Separation**: Dedicated `IngestionService` isolating business logic from MCP transport.
+- **Storage Abstraction**: `BaseVectorStore` protocol with ChromaDB default and Qdrant stub ([ADR-003](adr/ADR-003-basevectorstore-structural-protocol.md), [ADR-005](adr/ADR-005-idempotent-upsert-ingestion.md)).
+- **Retrieval Optimization**: Cached BM25Okapi sparse matrix with corpus fingerprinting ([ADR-004](adr/ADR-004-bm25-corpus-index-caching.md)).
+- **State & Schema Safety**: TypedDict `AgentState` with Pydantic V2 LLM output contracts ([ADR-002](adr/ADR-002-using-typeddict-for-agentstate.md)).
+- **Distributed Worker Queue**: Celery + Redis task queue with Docker Compose orchestration ([ADR-006](adr/ADR-006-celery-redis-task-queue.md)).
 
-9. **Phase 9: Production Observability, RAG Evaluation & Richer Ingestion** ✅
-   - **9.1 — Structured Logging & Node Tracing Decorator** ✅: Introduce structured JSON logging (`JsonFormatter`, `get_logger`) and a `@trace_node` decorator with per-node latency timing and trace event correlation; replace diagnostic `print()` calls throughout.
-   - **9.2 — Langfuse / OpenTelemetry Tracing Integration** ✅: Integrate **[Langfuse]** and **[OpenTelemetry]** as opt-in tracing backends wired dynamically through the `@trace_node` decorator with zero changes to node logic.
-   - **9.3 — RAG Evaluation Pipeline (Recall & Faithfulness)** ✅: Incorporate automated evaluation pipelines (`tests/eval/`) measuring candidate retrieval recall@K, MRR, and LLM screening faithfulness against ground-truth benchmark scenarios (`data/eval_scenarios.json`).
-   - **9.4 — PyMuPDF / Unstructured.io Ingestion Upgrade** ✅: Upgraded PDF ingestion using **[PyMuPDF]** (`fitz`) for layout-sorted multi-column parsing, with opt-in **[Unstructured.io]** support plugged through `fs_tools.py` and `IngestionService`.
+### Phase 9: Observability, Evaluation & Layout Ingestion ✅ (`v0.9.0` – `v0.9.4`)
+- **Structured Observability**: Structured JSON logging and `@trace_node` latency instrumentation with opt-in Langfuse and OpenTelemetry backends ([ADR-007](adr/ADR-007-structured-json-logging-and-tracing.md)).
+- **RAG Evaluation Suite**: Automated Recall@K, MRR, and LLM faithfulness benchmarks against ground-truth datasets.
+- **Advanced Document Ingestion**: PyMuPDF (`fitz`) vertical column-sorted extraction with opt-in Unstructured.io support.
 
-10. **Phase 10: Architecture Documentation & Project Closeout** ✅
-    - Published formal Architecture Decision Records (ADRs 001–008) in `docs/ARCHITECTURE_DECISIONS.md`.
-    - Synchronized all repository documentation (`README.md`, `docs/ROADMAP.md`, `docs/CONVENTIONS.md`, `CONTRIBUTING.md`, `docs/architecture.md`) to reflect full `v1.0.0` production baseline.
+### Phase 10: Semantic Routing, Multi-Provider Scale & Architecture Baseline ✅ (`v1.0.0` – `v1.1.0`)
+- **Multi-Factor Hybrid Scoring**: Min-max normalized 60/40 dense-sparse candidate ranking with grounded guardrails ([ADR-008](adr/ADR-008-multi-factor-hybrid-scoring-and-hierarchy.md)).
+- **Tiered Intent Routing**: <2ms local semantic vector routing with LLM structured classification fallback ([ADR-009](adr/ADR-009-tiered-semantic-embedding-intent-routing.md)).
+- **Multi-Provider & Indic LLMs**: Unified provider factory with Sarvam AI (`sarvam-105b`), Groq, Gemini, and OpenAI ([ADR-010](adr/ADR-010-multi-provider-sarvam-indic-llm.md)).
+- **Architectural Documentation**: Published formal Architecture Decision Records catalog ([ADRs 001–015](adr/README.md)).
 
 ---
 
-## 🔮 Future Backlog (Post-Release)
+## 🔮 Planned Enterprise Releases
 
-- **Indirect Prompt Injection Defense**: Pre-screening sanitization of adversarial instructions in resume text.
-- **PII Anonymization Layer**: Reversible candidate entity tokenization for privacy compliance.
-- **Semantic Embedding Cache**: Sub-10ms repeat candidate screening cache.
-- **Parallel Async Batch Screening**: Rate-limited semaphore concurrency for Round 2 audits.
-- **Human-in-the-Loop Workflow Gate**: LangGraph `interrupt()` approval step before recruiter outreach.
-- **Multi-Agent Consensus Loop**: Independent screener personas (Technical vs. HR/Sourcing) review before final recommendation.
-- **Bias & Fairness Auditing**: Automated checker auditing JDs and evaluations for inclusive language and constraint biases.
+### Phase 11: Production Hardening, Security & State Invariance ⏳ (`v1.2.0`)
+- **11.1 — Stateless Credential Isolation**: Purge API credentials from `AgentState`; inject via `RunnableConfig` (CWE-312 compliance) ([ADR-011](adr/ADR-011-stateless-credential-isolation.md)).
+- **11.2 — Functional State Immutability**: Enforce copy-on-write candidate dict updates for safe LangGraph retries ([ADR-012](adr/ADR-012-functional-state-immutability.md)).
+- **11.3 — Dynamic Skills Taxonomy**: Declarative YAML taxonomy with canonical alias stemming (`K8s` $\to$ `Kubernetes`) ([ADR-013](adr/ADR-013-dynamic-skills-taxonomy-alias-normalization.md)).
+- **11.4 — Floating-Point Precision**: Migrate `CandidateMatch.score` typing from `int` to `float` across state schemas.
+
+### Phase 12: High-Throughput Screening & Resource Lifecycle ⏳ (`v1.3.0`)
+- **12.1 — Async Candidate Deep Screening**: Concurrency-controlled worker pool (`ThreadPoolExecutor` + `Semaphore(2)`) reducing screening wall-clock time from ~75s to ~15s ([ADR-014](adr/ADR-014-concurrency-controlled-async-screening.md)).
+- **12.2 — Singleton Model Caching**: Cache `JobMatcher` and embedder instances via `@st.cache_resource` and container DI.
+- **12.3 — Open/Closed Provider Registry**: Extensible `PROVIDER_REGISTRY` mapping with runtime `register_provider()` API ([ADR-015](adr/ADR-015-open-closed-llm-provider-registry.md)).
+- **12.4 — Modular UI Decomposition**: Refactor `app.py` into testable `ui/components/` and `ui/session_manager.py`.
+
+### Phase 13: Enterprise CI/CD, Supply Chain Security & Quality Gates ⏳ (`v1.4.0`)
+- **13.1 — Static Type Analysis**: Strict `mypy` type checking in CI.
+- **13.2 — Test Coverage Enforcement**: Automated `pytest-cov` gate enforcing $\ge 75\%$ code coverage.
+- **13.3 — Security Scanning**: Automated secret detection (`gitleaks`) and CVE vulnerability auditing (`pip-audit`).
+- **13.4 — Multi-Version Matrix**: Python 3.11 and 3.12 CI test matrix validation.
+
+### Phase 14: Engine Resilience, Cache Correctness & Retrieval Precision ⏳ (`v1.5.0`)
+- **14.1 — Deterministic BM25 Fingerprinting**: Global corpus hash validation for robust cache invalidation.
+- **14.2 — Guardrail Boundary Normalization**: Refined threshold boundaries in recommendation nodes.
+- **14.3 — Async Subprocess Lifecycle**: Clean stdio stream and event loop teardown.
+- **14.4 — Developer Experience Tooling**: Comprehensive `Makefile` and CLI scenario evaluation tooling.
+
+---
+
+## 🚀 Future Backlog (Post-Phase 14)
+
+- **Indirect Prompt Injection Sanitizer**: Pre-screening sanitization scanning candidate resume text for adversarial prompt overrides.
+- **PII Anonymization & Redaction Layer**: Reversible entity tokenization (`[CANDIDATE_A]`) for privacy compliance.
+- **Semantic Embedding Cache**: Redis-backed semantic vector query cache ($< 10\text{ms}$).
+- **Multi-Agent Consensus Loop**: Independent Technical Architect and HR Sourcing screener debate before recommendation.
+- **Bias & Fairness Auditing**: Automated inclusivity auditing for job descriptions and screening assessments.
 
 ---
 
 <!-- References -->
-
 [langgraph]: https://langchain-ai.github.io/langgraph/
 [streamlit]: https://streamlit.io/
-[langchain-groq]: https://github.com/langchain-ai/langchain/tree/master/libs/partners/groq
-[langchain-google-genai]: https://github.com/langchain-ai/langchain/tree/master/libs/partners/google-genai
 [ChromaDB]: https://www.trychroma.com/
 [FastMCP]: https://github.com/modelcontextprotocol/python-sdk
 [Ruff]: https://github.com/astral-sh/ruff
 [Qdrant]: https://qdrant.tech/
-[pgvector]: https://github.com/pgvector/pgvector
 [Celery]: https://docs.celeryq.dev/
 [Redis]: https://redis.io/
 [Langfuse]: https://langfuse.com/
-[Arize Phoenix]: https://phoenix.arize.com/
-[Ragas]: https://github.com/explodinggradients/ragas
-[DeepEval]: https://github.com/confident-ai/deepeval
-[Unstructured.io]: https://unstructured.io/
-[PyMuPDF]: https://github.com/pymupdf/PyMuPDF
 [OpenTelemetry]: https://opentelemetry.io/
-[Pydantic]: https://docs.pydantic.dev/
+[PyMuPDF]: https://github.com/pymupdf/PyMuPDF
+[Sarvam AI]: https://www.sarvam.ai/

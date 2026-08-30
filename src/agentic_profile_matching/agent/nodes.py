@@ -18,7 +18,7 @@ from agentic_profile_matching.tools import (
     compare_candidates,
     generate_interview_questions,
     execute_with_retry,
-    parse_json_output,
+    invoke_structured,
     DeepScreenOutput,
     JobRequirementsOutput,
 )
@@ -335,8 +335,7 @@ Candidate Resume Text:
                 SystemMessage(content=DEEP_SCREEN_SYSTEM_PROMPT),
                 HumanMessage(content=prompt_content),
             ]
-            response = llm.invoke(messages)
-            return parse_json_output(response.content, model_cls=DeepScreenOutput)
+            return invoke_structured(llm, messages, DeepScreenOutput)
 
         try:
             result = execute_with_retry(_call_deep_screen)
@@ -637,8 +636,7 @@ def adjust_requirements_node(state: AgentState, config: Optional[RunnableConfig]
             SystemMessage(content=system_prompt),
             HumanMessage(content=f"Update the requirements using this instruction: '{last_msg}'"),
         ]
-        response = llm.invoke(messages_prompt)
-        return parse_json_output(response.content, model_cls=JobRequirementsOutput)
+        return invoke_structured(llm, messages_prompt, JobRequirementsOutput)
 
     try:
         updated_reqs = execute_with_retry(_call_adjust)

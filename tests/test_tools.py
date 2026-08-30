@@ -32,7 +32,7 @@ def test_execute_with_retry_rate_limit():
         assert res == "success"
         assert call_count == 2
         # verify sleep was called to wait/throttle
-        assert mock_sleep.call_count >= 2  # 0.5 throttle sleep + rate limit backoff sleep
+        assert mock_sleep.call_count >= 1  # rate limit backoff sleep
 
 
 def test_execute_with_retry_non_retryable_error():

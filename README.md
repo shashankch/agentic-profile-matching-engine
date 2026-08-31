@@ -1,15 +1,23 @@
-# Agentic Profile Matching Engine
+<div align="center">
 
-<p align="left">
+# 🤖 Agentic Profile Matching Engine
+
+<p align="center">
   <a href="https://github.com/shashankch/agentic-profile-matching-engine/actions/workflows/ci.yml"><img src="https://github.com/shashankch/agentic-profile-matching-engine/actions/workflows/ci.yml/badge.svg" alt="Python CI"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-v1.1.0-blue.svg" alt="Version: v1.1.0"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg" alt="Python Version"></a>
+  <a href="docs/adr/README.md"><img src="https://img.shields.io/badge/ADRs-15%20Accepted-teal.svg" alt="Architecture Decision Records"></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Linter: Ruff"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="docs/CONVENTIONS.md"><img src="https://img.shields.io/badge/Conventions-Architectural-purple.svg" alt="Conventions"></a>
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/Contributing-Welcome-green.svg" alt="Contributing"></a>
 </p>
 
-An interactive **AI Recruiter & Profile Matching Engine** built with **LangGraph**, **Hybrid RAG (Semantic Vector + BM25 Okapi)**, and the **Model Context Protocol (MCP)**. 
+<p align="center">
+  <strong>An interactive AI Recruiter & Profile Matching Engine built with LangGraph, Hybrid RAG (Semantic Vector + BM25 Okapi), and the Model Context Protocol (MCP).</strong>
+</p>
+
+</div>
 
 The engine automates multi-stage candidate vetting by parsing unstructured job descriptions, executing a cost-efficient **3-Round Cascading Screening Funnel**, producing grounded hiring recommendations with tailored technical interview questions, and enabling real-time conversational requirement adjustments mid-session.
 
@@ -71,42 +79,42 @@ graph TB
 To eliminate rate-limit bottlenecks and optimize LLM token consumption ($O(N) \to O(K)$), candidate evaluation cascades across 3 tiers:
 
 ```mermaid
-graph TD
-    Raw["📂 Resume Corpus (100+ Profiles)<br/>PDF, DOCX, TXT Documents"] -->|"Stage 1: Local In-Memory Compute (0 LLM Cost)"| Round1
+graph LR
+    Raw["📂 Resume Corpus<br/>(100+ Profiles)<br/>PDF, DOCX, TXT"] -->|"Stage 1: Local In-Memory Compute<br/>(0 LLM Cost)"| Round1
     
     subgraph S1 ["Stage 1: Coarse Filtering (0 LLM Cost)"]
-        Round1["⚡ Round 1: Hybrid Vector + BM25 Ranking<br/>• Min-Max Vector Similarity (50%)<br/>• Stop-word Filtered BM25 Keyword Match (35%)<br/>• Experience & Skills Satisfaction Ratio (15%)<br/><b>Output: Top 10 Shortlisted Candidates</b>"]
+        Round1["⚡ Round 1: Hybrid Vector + BM25<br/>• Min-Max Vector Similarity (50%)<br/>• Stop-word Filtered BM25 (35%)<br/>• Experience & Skills Ratio (15%)<br/><b>Output: Top 10 Shortlisted Candidates</b>"]
     end
 
-    Round1 -->|"Stage 2: LLM Text Audit (~3k Tokens/Profile)"| Round2
+    Round1 -->|"Stage 2: LLM Text Audit<br/>(~3k Tokens/Profile)"| Round2
 
     subgraph S2 ["Stage 2: Deep Profile Analysis (~3k Tokens/Profile)"]
-        Round2["🔬 Round 2: LLM Deep Screening<br/>• Core Strengths Identification<br/>• Skill & Technology Gap Diagnostics<br/>• Actionable Candidate Improvement Suggestions<br/>• Status: Strong Hire | Borderline | Rejected<br/><b>Output: Top 5 Ranked Candidates</b>"]
+        Round2["🔬 Round 2: LLM Deep Screening<br/>• Core Strengths Identification<br/>• Skill & Technology Gap Diagnostics<br/>• Candidate Improvement Suggestions<br/>• Status: Strong Hire | Borderline | Rejected<br/><b>Output: Top 5 Ranked Candidates</b>"]
     end
 
-    Round2 -->|"Stage 3: Decision & Question Synthesis"| Round3
+    Round2 -->|"Stage 3: Decision & QGen"| Round3
 
-    subgraph S3 ["Stage 3: Hiring Decision & Interview Synthesis"]
-        Round3["📋 Round 3: Final Recommendations & QGen<br/>• Grounded Hire / No-Hire Recommendation<br/>• Strict Missing Skills & Experience Safety Guardrails<br/>• 3-5 Tailored Technical Interview Questions<br/><b>Output: Recruiter Comparison Matrix & Exportable Report</b>"]
+    subgraph S3 ["Stage 3: Decision & Interview Synthesis"]
+        Round3["📋 Round 3: Final Recs & QGen<br/>• Grounded Hire / No-Hire Rec<br/>• Missing Skills & Exp Safety Guardrails<br/>• 3-5 Tailored Interview Questions<br/><b>Output: Comparison Matrix & Report</b>"]
     end
 ```
 
 ---
 
-## 🏆 Engineering Highlights & Architecture Decisions
+## 🏆 Key Architecture Highlights
 
-The system architecture is governed by **8 formal Architecture Decision Records (ADRs)** documented in [`docs/ARCHITECTURE_DECISIONS.md`](docs/ARCHITECTURE_DECISIONS.md):
+The engine is built following formal **Architecture Decision Records (ADRs)** documented in [`docs/adr/`](docs/adr/README.md). Key architectural choices include:
 
-| ADR | Title | Key Architectural Choice | Production Impact |
-|:---|:---|:---|:---|
-| **[ADR-001](docs/ARCHITECTURE_DECISIONS.md#adr-001-model-context-protocol-mcp-dual-mode-gateway-architecture)** | **MCP Dual-Mode Gateway** | Dynamic toggle between in-process Python and FastMCP JSON-RPC 2.0 `stdio` transport | Zero-overhead local testing + full microservice protocol compliance |
-| **[ADR-002](docs/ARCHITECTURE_DECISIONS.md#adr-002-using-typeddict-for-agentstate-over-pydantic-basemodel)** | **TypedDict State Management** | `TypedDict` for graph state with strict Pydantic V2 models at LLM I/O boundaries | Eliminates checkpointer serialization overhead while guaranteeing type safety |
-| **[ADR-003](docs/ARCHITECTURE_DECISIONS.md#adr-003-basevectorstore-structural-protocol-over-abstract-base-class-abcabc)** | **BaseVectorStore Protocol** | Structural typing (`typing.Protocol`) instead of rigid class inheritance | Swappable vector backends (ChromaDB, Qdrant) via dependency injection |
-| **[ADR-004](docs/ARCHITECTURE_DECISIONS.md#adr-004-bm25-okapi-corpus-index-caching-with-invalidation)** | **BM25 Index Caching** | Memory-cached `BM25Okapi` sparse matrix with MD5 corpus fingerprint checks | Reduces hybrid search query latency from ~200ms down to **~0.1ms** |
-| **[ADR-005](docs/ARCHITECTURE_DECISIONS.md#adr-005-idempotent-upsert-ingestion-with-section-scoped-chunk-keys)** | **Idempotent Ingestion** | Section-scoped deterministic chunk keys (`{file}_chunk_{idx}`) | 100% idempotent document re-ingestion without database bloat |
-| **[ADR-006](docs/ARCHITECTURE_DECISIONS.md#adr-006-celery--redis-task-queue-for-asynchronous-heavy-operations)** | **Celery + Redis Task Queue** | Distributed task worker queue with Docker Compose orchestration | Non-blocking background PDF ingestion and parallel LLM candidate audits |
-| **[ADR-007](docs/ARCHITECTURE_DECISIONS.md#adr-007-structured-json-logging--pluggable-tracing-pipeline)** | **Production Observability** | Structured JSON logging + `@trace_node` decorator with Langfuse & OTel support | Millisecond node latency tracking and enterprise APM log compatibility |
-| **[ADR-008](docs/ARCHITECTURE_DECISIONS.md#adr-008-multi-factor-hybrid-candidate-scoring--grounded-llm-recommendation-hierarchy)** | **Multi-Factor Scoring & Hierarchy** | Min-max vector scaling + grounded LLM status hierarchy with safety guardrails | Eliminates arbitrary score cutoffs and prevents prompt hallucinations |
+| Highlighted ADR | Architectural Focus | Production Impact |
+|:---|:---|:---|
+| **[ADR-001](docs/adr/ADR-001-mcp-dual-mode-gateway-architecture.md)** | **Model Context Protocol (MCP) Dual Gateway** | Hot-swap between in-process Python and FastMCP JSON-RPC `stdio` servers |
+| **[ADR-006](docs/adr/ADR-006-celery-redis-task-queue.md)** | **Distributed Celery + Redis Task Queue** | Non-blocking background PDF ingestion and parallel candidate audits |
+| **[ADR-008](docs/adr/ADR-008-multi-factor-hybrid-scoring-and-hierarchy.md)** | **Multi-Factor Hybrid Scoring & Hierarchy** | Min-max dense/sparse scoring with grounded LLM safety guardrails |
+| **[ADR-009](docs/adr/ADR-009-tiered-semantic-embedding-intent-routing.md)** | **Tiered Semantic Vector Intent Routing** | < 2ms local semantic similarity with zero-cost dispatch for 85%+ requests |
+| **[ADR-010](docs/adr/ADR-010-multi-provider-sarvam-indic-llm.md)** | **Multi-Provider & Indic Model Support** | Unified LLM abstraction for Sarvam AI (105B Indic), Groq, Gemini, and OpenAI |
+| **[ADR-011](docs/adr/ADR-011-stateless-credential-isolation.md)** | **Stateless Credential Isolation** | Purge keys from `AgentState` to prevent CWE-312 leakage in checkpoints |
+
+> 📚 **Complete Architecture Catalog**: View all 15 formal Architecture Decision Records with context, alternatives, and consequences in [**`docs/adr/README.md`**](docs/adr/README.md).
 
 ---
 
@@ -114,10 +122,10 @@ The system architecture is governed by **8 formal Architecture Decision Records 
 
 | Category | Supported Technologies & Standards | Configuration / Usage |
 |:---|:---|:---|
-| **Agent Framework** | [LangGraph] (StateGraph, MemorySaver, Conditional Routing, Dynamic Subgraphs) | `agent/` modular package |
+| **Agent Framework** | [LangGraph] (StateGraph, MemorySaver, Tiered Semantic Router, Dynamic Subgraphs) | `agent/` modular package |
 | **Vector Storage** | [ChromaDB] (Default Persistent Store), [Qdrant] (Enterprise Vector Store Stub) | `BaseVectorStore` protocol injection |
 | **Sparse Retrieval** | [Rank-BM25] (BM25Okapi with stop-word tokenization and cache invalidation) | `job_matcher.py` |
-| **LLM Providers** | [Groq API] (Llama 3.3 70B, Qwen 2.5), [Google Gemini Pro], Local Ollama | `.env` credentials |
+| **LLM Providers** | [Groq API], [Google Gemini Pro], [Sarvam AI] (`sarvam-105b`), [OpenAI] | `.env` credentials & UI dropdown |
 | **Document Ingestion** | **PyMuPDF** (`fitz` multi-column layout sorting), **Unstructured.io**, `python-docx`, `pypdf` | `IngestionService` + `fs_tools.py` |
 | **Protocol Standards** | [Model Context Protocol (MCP)][mcp] (FastMCP `stdio` JSON-RPC 2.0 servers) | `USE_MCP=True/False` |
 | **Observability** | Structured JSON Logs, [Langfuse], [OpenTelemetry] (OTLP), `@trace_node` | `OBSERVABILITY_BACKEND` |
@@ -212,7 +220,7 @@ ruff format --check src/ tests/
 ## 📚 Technical Documentation & Deep-Dives
 
 - 🏛️ **[Detailed System Architecture & Specifications](docs/architecture.md)**: Deep dive on dataflow sequences, mathematical scoring formulations, state transitions, and distributed scaling.
-- 📐 **[Formal Architecture Decision Records (ADRs 001–008)](docs/ARCHITECTURE_DECISIONS.md)**: Design context, evaluated alternatives, trade-offs, and consequences.
+- 📐 **[Formal Architecture Decision Records (ADRs 001–015)](docs/adr/README.md)**: Design context, evaluated alternatives, trade-offs, and consequences.
 - 🗺️ **[Implementation Roadmap](docs/ROADMAP.md)**: Phased milestones, completed deliverables, and future backlog.
 - 🛡️ **[Engineering Conventions](docs/CONVENTIONS.md)**: Architectural patterns, Pydantic V2 schemas, error boundaries, and type safety rules.
 - 🤝 **[Contributing Guidelines](CONTRIBUTING.md)**: Local developer workflow, PR conventions, and quality gates.
@@ -235,3 +243,5 @@ ruff format --check src/ tests/
 [Redis 7]: https://redis.io/
 [Langfuse]: https://langfuse.com/
 [OpenTelemetry]: https://opentelemetry.io/
+[Sarvam AI]: https://www.sarvam.ai/
+[OpenAI]: https://openai.com/

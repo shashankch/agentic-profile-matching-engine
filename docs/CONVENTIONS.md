@@ -102,3 +102,68 @@ Before submitting a Pull Request for ANY subphase:
 1. **Quality Gate**: `ruff check src/ tests/`, `ruff format --check src/ tests/`, and `pytest tests/ -v` MUST pass with zero errors.
 2. **CHANGELOG Sync**: `CHANGELOG.md` MUST record all added, changed, fixed, or security items under a new version tag (`[X.Y.Z] - YYYY-MM-DD`).
 3. **README Sync**: `README.md` features overview, project directory tree, and setup commands MUST be updated to reflect all newly added modules, tools, and test suites.
+
+---
+
+## 🤖 9. Intent Routing & Structured LLM Standards
+
+1. **Decoupled Tiered Intent Routing (ADR-009)**
+   - Hardcoded substring / keyword matching arrays for routing decisions are strictly prohibited.
+   - Graph routing MUST use a tiered hybrid architecture:
+     - Tier 1: Local cosine similarity via in-memory `SentenceTransformer` anchor embeddings (< 2ms, 0 API cost).
+     - Tier 2: LLM structured intent classification (`with_structured_output(RouteDecision)`) for ambiguous inputs.
+
+2. **Schema-Enforced Tool Outputs (ADR-010)**
+   - All tool functions expecting structured outputs from LLMs MUST use `invoke_structured()` with explicit Pydantic V2 schemas.
+   - String responses MUST be protected with balanced-bracket extraction and multi-tier auto-repair.
+
+---
+
+## 🔒 10. State Immutability & LangGraph Checkpoint Invariance (ADR-012)
+
+1. **Functional State Updates Only**
+   - Direct in-place mutation of dictionaries in `AgentState` is strictly prohibited.
+   - Nodes must construct and return new dictionaries (`{**c, ...}`) when updating candidate assessment metadata.
+   - All node functions must remain pure and idempotent, guaranteeing safe retry execution from any `MemorySaver` checkpoint.
+
+2. **Accurate Numeric Typing**
+   - Numeric scores must be typed as `float` across all state schemas to prevent precision truncation during hybrid ranking and sorting.
+
+---
+
+## 🛡️ 11. Credential Security & Stateless Execution Standards (ADR-011)
+
+1. **Purge Credentials from Serializable State**
+   - API keys, access tokens, and base URLs must NEVER be stored in `AgentState` or serialized in graph memory.
+   - LLM instances and credential handles must be injected exclusively at runtime via `RunnableConfig` (`configurable["llm"]`) or an in-memory `CredentialStore`.
+
+2. **Structured Log Sanitization**
+   - Log formatters must apply automated redaction filters masking API keys, authorization headers, and bearer tokens from all log outputs.
+
+---
+
+## ⚡ 12. Concurrency & Resource Lifecycle Standards (ADR-014, ADR-015)
+
+1. **Bounded Concurrency with Rate Limiting**
+   - Parallel LLM screening loops must be constrained using bounded worker pools (`ThreadPoolExecutor`) and rate-limiting `Semaphore` locks to prevent HTTP 429 quota exhaustion.
+   - Real-time progress events must be emitted to keep UI consumers responsive.
+
+2. **Singleton Model Lifecycle & Dependency Injection**
+   - Embedding models (`SentenceTransformer`) and search orchestrators (`JobMatcher`) must be managed as cached singletons (e.g. `@st.cache_resource` / DI container) to eliminate redundant model instantiation.
+
+3. **Open/Closed Provider Registry**
+   - LLM factories must use a modular `PROVIDER_REGISTRY` mapping with `register_provider()` extension hooks, eliminating procedural `if/elif` chains.
+
+---
+
+## 🧪 13. CI/CD Quality Gates & Static Type Enforcement
+
+1. **Static Type Checking**
+   - All code must pass `mypy src/ --strict-optional` before merging.
+
+2. **Test Coverage Thresholds**
+   - Pull requests must maintain a minimum automated test coverage of **75%** enforced via `pytest-cov --cov-fail-under=75`.
+
+3. **Supply Chain & Secret Auditing**
+   - CI workflows must include automated secret scanning (`gitleaks`) and dependency vulnerability auditing (`pip-audit`).
+

@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-09-28
+### Added
+- **Modular Streamlit UI Decomposition (Deliverable 16.1)**:
+  - Decomposed monolithic 946-LOC `app.py` into a clean, testable `<75-LOC` conductor delegating to a modular `src/agentic_profile_matching/ui/` package.
+  - Created `ui/styles.py`: Bespoke glassmorphic tokens, CSS variables, Outfit typography, adaptive dark/light themes with auto-detect DOM MutationObserver.
+  - Created `ui/session.py`: Lazy vector store bootstrap (`ensure_vector_store_initialized()`) with 0.03s instant cold startup, session state initialization, and reset handlers.
+  - Created `ui/runner.py`: Streamlit workflow runner (`run_agent_workflow_with_status()`), text chunk generator (`stream_text_chunks()`), and execution event wrappers.
+  - Created `ui/components/sidebar.py`: Zero-scroll recruiter sidebar with LLM setup, Tavily/DuckDuckGo web search key input, candidate retrieval count limits, and live active requirements constraint editor.
+  - Created `ui/components/chat.py`: Interactive recruiter conversation tab with typewriter response streaming, message history, and user input conductor.
+  - Created `ui/components/talent_pool.py`: In-memory zero-disk multi-format resume drag-and-drop uploader (`.pdf`, `.docx`, `.txt`) and active candidate corpus inventory.
+  - Created `ui/components/matrix.py`: Head-to-head candidate comparison matrix with XSS-sanitized profile cards, score badges, strengths/gaps, and tailored interview questions.
+  - Created `ui/components/deep_screen.py`: Dedicated deep screening analysis tab displaying comprehensive candidate audits and role fit evaluations.
+- **Streamlit-Native Real-Time Streaming & Tool Visibility (Deliverable 16.2)**:
+  - Integrated `st.write_stream()` token generator for fluid, typewriter-style conversational responses in recruiter chat, eliminating frozen waiting spinners.
+  - Implemented dynamic intent-aware `st.status` headers (`"🌐 Researching external query & trends..."` vs `"📋 Recruiter Agent is analyzing candidates..."`).
+  - Added intra-node tool progress tracking and live status indicators for `search_web_tool` (Tavily/DuckDuckGo) and candidate retrieval operations.
+- **Headless FastAPI Gateway Sidecar (Deliverable 16.3)**:
+  - Created `src/agentic_profile_matching/api/` package with an additive, decoupled ASGI sidecar architecture.
+  - Created `api/schemas.py`: Pydantic V2 request/response contracts for health checks, job requirement extraction, candidate matching, and streaming.
+  - Created `api/routes.py`: REST endpoints (`GET /health`, `GET /api/v1/health`, `POST /api/v1/jobs/extract`, `POST /api/v1/candidates/match`) and real-time Server-Sent Events (`GET /api/v1/workflow/stream`).
+  - Created `api/app.py`: FastAPI application factory (`create_app()`) with CORS middleware and OpenAPI interactive documentation (`/docs`).
+  - Created `api/main.py`: Standalone CLI runner for `uvicorn`.
+- **Automated Quality Gates & Unit Testing**:
+  - Added `tests/test_ui_components.py` (12 unit tests validating modular UI components, session state, styles, sidebar, chat, and matrix).
+  - Added `tests/test_api.py` (4 integration tests validating FastAPI health check, job extraction, candidate matching, and SSE streaming).
+  - Maintained 100% test pass rate across 103 unit/integration tests with 0 Ruff lint/format errors.
+
 ## [1.2.1] - 2026-09-13
 ### Added
 - **Streamlit UI Zero-Scroll Sidebar**: Compacted Section 2 into a single-line badge (`📂 34 Profiles Active • 172 chunks`), removed redundant dividers and excess vertical margin, ensuring Section 4 ("Active Requirements Constraints") is visible in standard laptop viewports without scrolling.

@@ -6,6 +6,8 @@ rank-bm25
 reportlab
 langgraph
 streamlit
+fastapi>=0.115.0
+uvicorn>=0.30.0
 langchain-core
 langchain-community
 langchain-groq

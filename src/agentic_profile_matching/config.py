@@ -20,8 +20,10 @@ DATA_DIR = Path(
 RESUMES_DIR = os.getenv("RESUMES_DIR", str(DATA_DIR / "resumes"))
 JOB_DESCRIPTIONS_DIR = os.getenv("JOB_DESCRIPTIONS_DIR", str(DATA_DIR / "job_descriptions"))
 
-# Embedding Config
+# Embedding & Two-Stage Reranking Config
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+RERANKER_MODEL = os.getenv("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+USE_RERANKER = os.getenv("USE_RERANKER", "True").lower() in ("true", "1", "yes")
 TOP_K = int(os.getenv("TOP_K", "10"))
 
 # Supported LLM Models & Providers

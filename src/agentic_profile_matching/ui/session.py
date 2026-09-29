@@ -66,10 +66,17 @@ def init_session_state() -> None:
     # Initialize base and session vector stores
     base_store = ensure_vector_store_initialized()
     if "ephemeral_store" not in st.session_state:
-        st.session_state["ephemeral_store"] = ChromaVectorStore(
-            collection_name=f"uploads_{st.session_state['session_id']}",
-            ephemeral=True,
-        )
+        try:
+            st.session_state["ephemeral_store"] = ChromaVectorStore(
+                collection_name=f"uploads_{st.session_state['session_id']}",
+                ephemeral=True,
+            )
+        except Exception:
+            from agentic_profile_matching.stores.in_memory_store import InMemoryVectorStore
+
+            st.session_state["ephemeral_store"] = InMemoryVectorStore(
+                collection_name=f"uploads_{st.session_state['session_id']}"
+            )
     if "session_vector_store" not in st.session_state:
         st.session_state["session_vector_store"] = CompositeVectorStore(
             base_store=base_store,

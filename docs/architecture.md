@@ -712,6 +712,64 @@ graph TD
    - `POST /api/v1/candidates/match`: High-speed hybrid BM25 + dense vector ranking API.
    - `POST /api/v1/workflow/stream`: Server-Sent Events (SSE) streaming progress milestones (`session_start`, `node_update`, `done`).
 
+---
+
+## 17. Layout-Aware Parsing, Anthropic Contextual Retrieval & Two-Stage Reranking (Phase 17)
+
+```mermaid
+graph TD
+    subgraph Ingestion_Stage ["1. Layout-Aware Section Parsing & Contextual Retrieval"]
+        Doc["📄 Resume File (.pdf, .docx, .txt)"] --> Parser["SectionParser<br/>(PyMuPDF get_text('blocks') / docx / regex)"]
+        Parser --> Sections["Hierarchical Sections<br/>(EXPERIENCE, SKILLS, EDUCATION)"]
+        Sections --> ContextBanner["ContextualEnricher<br/>(Anthropic Context Prepending: [Candidate | Role | Skills])"]
+        ContextBanner --> EmbedIndex["Hybrid Vector & BM25 Indexing<br/>(Contextual Text Embedded • Raw Text Preserved)"]
+    end
+
+    subgraph Two_Stage_Retrieval ["2. Two-Stage Hybrid Retrieval & Cross-Encoder Reranking"]
+        Query["🔍 Recruiter Query / Job Requirements"] --> Stage1["Stage 1: Coarse Hybrid Retrieval<br/>(Dense Vector Cosine + BM25 Lexical)"]
+        EmbedIndex --> Stage1
+        Stage1 --> TopCandidates["Top-N Shortlisted Candidates"]
+        TopCandidates --> Stage2["Stage 2: Cross-Encoder Joint Reranker<br/>(cross-encoder/ms-marco-MiniLM-L-6-v2)"]
+        Stage2 --> Calibrator["Sigmoid Calibration & Reciprocal Rank Fusion (RRF)"]
+        Calibrator --> FinalRank["🏆 Calibrated Top Candidates<br/>(Passed to Deep Screening & Matrix)"]
+    end
+```
+
+### 17.1 Layout-Aware Section Parsing (`services/section_parser.py`)
+Traditional naive text splitters split documents by fixed character or token counts, frequently cutting across work experiences, separating company names from responsibilities, and losing bullet point context.
+- **PyMuPDF Bounding-Box Layout Parsing**: PDF documents are parsed page-by-page using `page.get_text("blocks")`, grouping spatial blocks by vertical and horizontal flow to reconstruct true visual paragraphs.
+- **Paragraph Hierarchy for DOCX**: Ingests Word documents preserving headings, bold styling runs, and bulleted lists.
+- **Canonical Taxonomy Normalization**: Maps diverse resume heading styles into standard buckets (`SUMMARY`, `EXPERIENCE`, `SKILLS`, `EDUCATION`, `PROJECTS`, `CERTIFICATIONS`).
+- **Semantic Role Integrity**: Reconstructs work experience entries by grouping the job title, company name, dates, and associated accomplishment bullets into a single cohesive chunk before passing downstream.
+
+### 17.2 Anthropic Contextual Retrieval Prepending (`services/contextual_retrieval.py`)
+In standard RAG, isolated chunks (e.g. *"Architected Kafka pipeline reducing latency by 40%"*) lose critical context: who did this, at what seniority level, and with what surrounding stack?
+- **Document Metadata Banner Synthesis**: Extracts candidate identity, seniority level, primary skills, and education to generate a compact 50–80 word document banner:
+  ```text
+  [Candidate: Alex Mercer | Target Role: Staff Backend Engineer | Experience: 8+ years | Primary Skills: Go, Kubernetes, Kafka, Distributed Systems | Education: B.S. Computer Science]
+  ```
+- **Contextual Index Prepending**: The banner is prepended to each section chunk specifically for embedding generation and BM25 tokenization:
+  ```text
+  [Candidate: Alex Mercer | Target Role: Staff Backend Engineer | Experience: 8+ years | Primary Skills: Go, Kubernetes, Kafka, Distributed Systems | Education: B.S. Computer Science]
+
+  Section: EXPERIENCE
+  Staff Infrastructure Engineer — TechCorp (2021–Present)
+  • Architected Kafka pipeline reducing latency by 40% across 12 microservices.
+  ```
+- **Raw Presentation Preservation**: The clean `raw_content` is preserved intact in chunk metadata (`metadata["raw_content"]`), ensuring recruiter UI cards, interview questions, and deep screening prompts display clean, unadulterated candidate text.
+
+### 17.3 Two-Stage Hybrid Retrieval & Cross-Encoder Reranking (`services/reranker.py`)
+- **Stage 1 (Coarse Candidate Retrieval)**: Performs initial candidate retrieval by combining dense sentence transformer embeddings (`sentence-transformers/all-MiniLM-L6-v2`) and sparse lexical matching (`rank-bm25`) over the talent pool.
+- **Stage 2 (Fine-Grained Cross-Encoder Reranking)**: Uses `sentence_transformers.CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")` to jointly evaluate the recruiter query and candidate profile simultaneously across full cross-attention layers.
+- **Reciprocal Rank Fusion & Calibration**: Evaluates reciprocal rank positions ($RRF(d) = \sum \frac{1}{60 + r(d)}$) and applies Sigmoid activation $\frac{1}{1 + e^{-x}}$ to map unbounded cross-encoder logits directly to calibrated confidence intervals $[0, 1]$.
+- **Graceful Offline Fallback**: If cross-encoder model downloads are restricted or GPU/CPU resources are constrained, the system falls back to Stage 1 hybrid scores with zero execution disruption.
+
+### 17.4 Serverless Cloud Deployment Resilience (`stores/in_memory_store.py`)
+- **Pure In-Memory Vector Store**: Implements the `BaseVectorStore` protocol using pure Python and NumPy matrix cosine similarity, requiring 0 SQLite extensions and 0 disk writes.
+- **Automatic Fallback Guardrail**: If `ChromaVectorStore(ephemeral=True)` encounters container permission locks or SQLite version mismatches on Linux serverless runtimes (Streamlit Cloud), it automatically falls back to `InMemoryVectorStore`.
+- **`pysqlite3` Dynamic Shim**: Injects `pysqlite3` at the top of `app.py` before any ChromaDB imports, resolving legacy SQLite version errors on cloud host platforms.
+
+
 
 
 

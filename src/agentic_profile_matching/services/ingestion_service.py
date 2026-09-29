@@ -12,7 +12,12 @@ from agentic_profile_matching.fs_tools import (
     read_file as direct_read_file,
     list_files as direct_list_files,
 )
-
+from agentic_profile_matching.services.section_parser import (
+    SectionParser,
+    ParsedSectionChunk,
+    CANONICAL_SECTION_MAP,
+)
+from agentic_profile_matching.services.contextual_retrieval import ContextualEnricher
 from agentic_profile_matching.stores import BaseVectorStore
 
 logger = logging.getLogger("ingestion_service")
@@ -22,15 +27,20 @@ class IngestionService:
     """
     Business logic service for candidate resume ingestion into the vector store.
     Decouples protocol handlers (e.g., FastMCP filesystem server) from RAG ingestion mechanics.
+    Leverages Layout-Aware SectionParser (17.1) and Contextual Retrieval Prepending (17.2).
     """
 
     def __init__(
         self,
         store: Optional[BaseVectorStore] = None,
         pipeline: Optional[ResumeRAGPipeline] = None,
+        parser: Optional[SectionParser] = None,
+        enricher: Optional[ContextualEnricher] = None,
     ):
         self._store = store
         self._pipeline = pipeline
+        self._parser = parser or SectionParser()
+        self._enricher = enricher or ContextualEnricher()
         if self._pipeline is None and self._store is not None:
             self._pipeline = ResumeRAGPipeline(store=self._store)
 
@@ -75,11 +85,25 @@ class IngestionService:
             return {"success": False, "filepath": str(path), "error": "Empty content"}
 
         extractor = MetadataExtractor()
-        chunker = ResumeChunker()
-
         filename = path.name
         meta = extractor.extract(filename, text)
-        chunks = chunker.chunk(text)
+
+        # Deliverable 17.1: Layout-aware section parsing
+        parsed_chunks = self._parser.parse_document(filepath_or_name=str(path), content=text)
+        if not parsed_chunks:
+            fallback_chunks = ResumeChunker().chunk(text)
+            parsed_chunks = [
+                ParsedSectionChunk(
+                    section_title=fc["section"],
+                    section_type=CANONICAL_SECTION_MAP.get(fc["section"].upper(), "general"),
+                    content=fc["content"],
+                    raw_content=fc["content"],
+                )
+                for fc in fallback_chunks
+            ]
+
+        # Deliverable 17.2: Anthropic Contextual Retrieval Prepending
+        chunks = self._enricher.enrich_chunks(parsed_chunks, meta)
 
         logger.info(
             f"Ingesting file '{filename}' - Candidate: {meta['candidate_name']}, "
@@ -87,13 +111,13 @@ class IngestionService:
         )
 
         pipeline = self.pipeline
-        contents = [ch["content"] for ch in chunks]
+        contents = [ch.content for ch in chunks]
         embeddings = pipeline.embedder.encode(contents, batch_size=32).tolist()
         chunk_ids = []
         chunk_metas = []
 
         for idx, ch in enumerate(chunks):
-            section_clean = ch["section"].lower().replace(" ", "_")
+            section_clean = ch.section_title.lower().replace(" ", "_")
             chunk_ids.append(f"{filename}_{section_clean}_{idx}")
             chunk_metas.append(
                 {
@@ -103,7 +127,11 @@ class IngestionService:
                     "education": meta["education"],
                     "resume_path": str(path),
                     "filename": filename,
-                    "section": ch["section"],
+                    "section": ch.section_title,
+                    "section_type": ch.section_type,
+                    "role": ch.role or "",
+                    "company": ch.company or "",
+                    "raw_content": ch.raw_content,
                 }
             )
 
@@ -220,10 +248,26 @@ class IngestionService:
             return {"success": False, "filename": filename, "error": "Extracted content is empty"}
 
         extractor = MetadataExtractor()
-        chunker = ResumeChunker()
-
         meta = extractor.extract(filename, content)
-        chunks = chunker.chunk(content)
+
+        # Deliverable 17.1: Layout-aware section parsing
+        parsed_chunks = self._parser.parse_document(
+            filepath_or_name=filename, content=content, stream_bytes=stream_bytes
+        )
+        if not parsed_chunks:
+            fallback_chunks = ResumeChunker().chunk(content)
+            parsed_chunks = [
+                ParsedSectionChunk(
+                    section_title=fc["section"],
+                    section_type=CANONICAL_SECTION_MAP.get(fc["section"].upper(), "general"),
+                    content=fc["content"],
+                    raw_content=fc["content"],
+                )
+                for fc in fallback_chunks
+            ]
+
+        # Deliverable 17.2: Anthropic Contextual Retrieval Prepending
+        chunks = self._enricher.enrich_chunks(parsed_chunks, meta)
 
         logger.info(
             f"Ingesting in-memory stream '{filename}' - Candidate: {meta['candidate_name']}, "
@@ -242,13 +286,13 @@ class IngestionService:
         except Exception as e:
             logger.debug(f"Could not prune prior chunks for {filename}: {e}")
 
-        contents = [ch["content"] for ch in chunks]
+        contents = [ch.content for ch in chunks]
         embeddings = pipeline.embedder.encode(contents, batch_size=32).tolist()
         chunk_ids = []
         chunk_metas = []
 
         for idx, ch in enumerate(chunks):
-            section_clean = ch["section"].lower().replace(" ", "_")
+            section_clean = ch.section_title.lower().replace(" ", "_")
             chunk_ids.append(f"stream_{filename}_{content_hash}_{section_clean}_{idx}")
             chunk_metas.append(
                 {
@@ -259,7 +303,11 @@ class IngestionService:
                     "resume_path": resume_ref,
                     "filename": filename,
                     "content_hash": content_hash,
-                    "section": ch["section"],
+                    "section": ch.section_title,
+                    "section_type": ch.section_type,
+                    "role": ch.role or "",
+                    "company": ch.company or "",
+                    "raw_content": ch.raw_content,
                 }
             )
 

@@ -4,12 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentic_profile_matching"
-version = "1.3.0"
+version = "1.4.0"
 description = "Yojaka AI: Production-grade Agentic Profile Matching Engine"
 readme = "README.md"
+license = "Apache-2.0"
 requires-python = ">=3.10"
 dependencies = [
     "chromadb>=1.5.9",
+    "pysqlite3-binary; sys_platform == 'linux'",
     "sentence-transformers",
     "pypdf>=6.16.1",
     "pymupdf",

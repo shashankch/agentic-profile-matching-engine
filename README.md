@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://yojaka-ai-job-profile-matching-engine.streamlit.app/"><img src="https://static.streamlit.io/badges/streamlit_badge_black_white.svg" alt="Streamlit App"></a>
   <a href="https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/ci.yml"><img src="https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/ci.yml/badge.svg" alt="Python CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-v1.2.1-blue.svg" alt="Version: v1.2.1"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-v1.3.0-blue.svg" alt="Version: v1.3.0"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.14-blue.svg" alt="Python Version"></a>
   <a href="docs/adr/README.md"><img src="https://img.shields.io/badge/ADRs-16%20Accepted-teal.svg" alt="Architecture Decision Records"></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Linter: Ruff"></a>
@@ -165,6 +165,8 @@ The engine is built following formal **Architecture Decision Records (ADRs)** do
 | Category | Supported Technologies & Standards | Configuration / Usage |
 |:---|:---|:---|
 | **Agent Framework** | [LangGraph] (StateGraph, MemorySaver, Tiered Semantic Router, Dynamic Subgraphs) | `agent/` modular package |
+| **Presentation UI** | [Streamlit] (Modular Component Architecture, `st.write_stream` typewriter streaming) | `ui/` modular package & `app.py` |
+| **REST & SSE API** | [FastAPI] (Headless Sidecar Gateway), [Uvicorn] (ASGI Server), Server-Sent Events | `api/` package (`routes.py`, `app.py`) |
 | **Vector Storage** | [ChromaDB] (Default Persistent Store), [Qdrant] (Enterprise Vector Store Stub) | `BaseVectorStore` protocol injection |
 | **Sparse Retrieval** | [Rank-BM25] (BM25Okapi with stop-word tokenization and cache invalidation) | `job_matcher.py` |
 | **LLM Providers** | [Groq API], [Google Gemini Pro], [Sarvam AI] (`sarvam-105b`), [OpenAI] | `.env` credentials & UI dropdown |
@@ -221,12 +223,21 @@ python -m agentic_profile_matching.resume_rag
 
 ### 4. Launch Application
 
+**Option A: Interactive Streamlit Recruiter Dashboard**
 ```bash
 # Launch interactive Streamlit Recruiter Dashboard
 streamlit run src/agentic_profile_matching/app.py
 ```
-
 *Access the dashboard at `http://localhost:8501` to test candidate matching, side-by-side comparisons, and conversational refinement.*
+
+**Option B: Headless FastAPI Gateway Sidecar (REST & SSE Streaming)**
+```bash
+# Launch headless ASGI API sidecar on port 8000
+uvicorn agentic_profile_matching.api.app:app --host 0.0.0.0 --port 8000
+# Or via package entrypoint:
+python -m agentic_profile_matching.api.main
+```
+*Explore interactive OpenAPI Swagger documentation at `http://localhost:8000/docs`.*
 
 > 💡 **Dedicated Resume Upload Tab**: Ingest custom resumes on the fly via the **📤 Resume Ingestion & Talent Pool** tab. Resumes are processed in-memory (`io.BytesIO`) via PyMuPDF/python-docx without server disk persistence ([ADR-016](docs/adr/ADR-016-zero-disk-in-memory-resume-ingestion.md)).
 >
@@ -251,7 +262,7 @@ docker compose logs -f
 ## 🧪 Testing & Automated Quality Gates
 
 ```bash
-# Run unit and integration test suite (87 tests)
+# Run unit and integration test suite (103 tests)
 pytest tests/ -v
 
 # Run RAG Evaluation Benchmark Suite (Recall@K, MRR & Faithfulness)
@@ -278,6 +289,8 @@ ruff format --check src/ tests/
 <!-- References -->
 [langgraph]: https://langchain-ai.github.io/langgraph/
 [streamlit]: https://streamlit.io/
+[FastAPI]: https://fastapi.tiangolo.com/
+[Uvicorn]: https://www.uvicorn.org/
 [ChromaDB]: https://www.trychroma.com/
 [Qdrant]: https://qdrant.tech/
 [mcp]: https://modelcontextprotocol.io/

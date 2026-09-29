@@ -87,14 +87,14 @@ This document outlines the strategic milestones for **Yojaka AI (Agentic Profile
 - **15.9 — LLM-Driven Intent Routing, Dynamic Anchors & Semantic Caching**: Re-architected `route_input` in `agent/routers.py` into a modern 2026 LLM-driven router (`_classify_via_llm` as primary authority), completely eliminating static hardcoded anchor dictionaries and keyword arrays; added dynamic LLM anchor synthesis (`generate_dynamic_intent_anchors`), in-memory LRU query routing cache (`_ROUTING_CACHE`) for $0\text{ms}$ repeated queries, case-insensitive provider resolution in `config.py`, and direct in-process tool fallbacks in `nodes.py` ([ADR-009](adr/ADR-009-tiered-semantic-embedding-intent-routing.md)).
 - **15.10 — Streamlit UI Ergonomics, Zero-Scroll Affordances, Cold-Start Path Resilience & Search Gateway**: Streamlined sidebar layout with compact metric badges eliminating vertical scrolling to reveal active constraints; client-friendly upload instructions without technical jargon; hardened repository-root path resolution (`BASE_DIR`/`DATA_DIR`/`RESUMES_DIR`) auto-discovering all 34 pre-loaded profiles on fresh browser sessions; integrated optional sidebar Tavily search API key with automatic fallback to DuckDuckGo; and downward expander affordances (`▾`).
 
+### Phase 16: Presentation Layer Modularization, Streamlit-Native Streaming & Headless FastAPI Sidecar Gateway (v1.3.0) ✅
+- **16.1 — Modular UI Decomposition**: Decomposed monolithic 946-LOC `app.py` into a clean, testable `<75-LOC` conductor and modular `ui/` package (`styles.py`, `session.py`, `runner.py`, `components/sidebar.py`, `components/chat.py`, `components/talent_pool.py`, `components/matrix.py`, `components/deep_screen.py`).
+- **16.2 — Streamlit-Native Real-Time Streaming & Tool Visibility**: Live typewriter-style response streaming via `st.write_stream()`, dynamic intent-aware `st.status` headers ("🌐 Researching external query..." vs "📋 Screening candidates..."), and intra-node tool progress execution tracking.
+- **16.3 — Headless FastAPI Gateway Sidecar (`api/`)**: Additive, decoupled ASGI sidecar (`api/app.py`, `api/routes.py`, `api/schemas.py`) exposing REST endpoints (`/health`, `/api/v1/jobs/extract`, `/api/v1/candidates/match`) and real-time Server-Sent Events (SSE) streaming (`/api/v1/workflow/stream`) for programmatic integrations and CI pipelines while keeping Streamlit 100% intact.
+
 ---
 
-## 🚀 Future Milestones (Phases 16–20)
-
-### Phase 16: Presentation Layer Modularization, Streamlit-Native Streaming & Headless API Sidecar
-- **16.1 — Modular UI Decomposition**: Extract monolithic `app.py` into testable `ui/` components (`styles.py`, `session.py`, `chat.py`, `talent_pool.py`, `cards.py`, `matrix.py`).
-- **16.2 — Streamlit-Native Streaming & Tool Visibility**: Live token-by-token streaming via `st.write_stream` and intra-node tool call progress badges via `st.status` collapsible traces.
-- **16.3 — Headless FastAPI Sidecar Gateway**: Additive ASGI server (`api/`) exposing SSE streaming endpoints (`/api/v1/stream`) for CI pipelines and headless integrations while preserving Streamlit intact.
+## 🚀 Future Milestones (Phases 17–20)
 
 ### Phase 17: Layout-Aware Section Parsing, Contextual Retrieval & Two-Stage Reranking
 - **17.1 — Hierarchical Resume Section Chunking**: Layout-aware chunking preserving section hierarchy (Work Experience, Skills, Education).

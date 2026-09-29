@@ -670,5 +670,48 @@ graph TD
    - Inclusivity scanners audit input job descriptions for exclusionary or hyper-aggressive phrasing before matching.
    - Candidate scoring engines generate explainable, competency-grounded rationale trails, ensuring full regulatory defensibility and non-discriminatory hiring decisions.
 
+---
+
+## 16. Dual-Surface Architecture: Modular Streamlit UI & Headless FastAPI Gateway (Phase 16)
+
+```mermaid
+graph TD
+    Recruiter["👤 Recruiter Browser Session"] --> Streamlit["🖥️ Streamlit Interactive UI<br/>(app.py < 75 LOC)"]
+    ExternalClient["🌐 External SaaS Client / CI Pipeline"] --> FastAPISidecar["⚡ Headless FastAPI Sidecar<br/>(REST & SSE Streaming)"]
+    
+    subgraph UI_Layer ["Modular Presentation Layer (ui/)"]
+        Streamlit --> Styles["ui/styles.py<br/>(Glassmorphism & Theme Engine)"]
+        Streamlit --> Session["ui/session.py<br/>(State Bootstrap & Lazy Stores)"]
+        Streamlit --> Runner["ui/runner.py<br/>(Live Status & st.write_stream)"]
+        Streamlit --> Tabs["ui/components/<br/>(chat, talent_pool, matrix, deep_screen)"]
+    end
+
+    subgraph API_Layer ["Headless Gateway Layer (api/)"]
+        FastAPISidecar --> Routes["api/routes.py<br/>(/health, /jobs/extract, /candidates/match)"]
+        FastAPISidecar --> SSERoutes["api/routes.py<br/>(/api/v1/workflow/stream)"]
+    end
+
+    Runner --> AgentGraph["🤖 LangGraph Matching Workflow<br/>(matching_agent_workflow)"]
+    Routes --> AgentGraph
+    SSERoutes --> AgentGraph
+    AgentGraph --> CompositeStore["💾 CompositeVectorStore<br/>(Base ChromaDB + Ephemeral Session Store)"]
+```
+
+1. **Dual-Surface Coexistence**:
+   - **Streamlit (`app.py`)**: Primary interactive web dashboard for recruiters, now reduced from 946 lines to a clean `<75-line` conductor delegating rendering to focused component modules (`ui/components/chat.py`, `ui/components/talent_pool.py`, `ui/components/matrix.py`, `ui/components/deep_screen.py`).
+   - **Headless FastAPI Gateway (`api/`)**: Additive, decoupled ASGI sidecar (`api/app.py`, `api/routes.py`, `api/schemas.py`) exposing OpenAPI-documented REST and Server-Sent Events (SSE) streaming endpoints without modifying or disrupting Streamlit.
+
+2. **Real-Time Streamlit Streaming & Tool Visibility (`ui/runner.py`)**:
+   - Upgrades recruiter chat with `st.write_stream()` token streaming for instantaneous typewriter output.
+   - Replaces generic spinners with intent-aware `st.status` headers (`"🌐 Researching external query..."` vs `"📋 Screening candidates..."`).
+   - Captures intra-node tool progress (`search_web_tool`, `fetch_candidate_notes_tool`) as live visible execution badges.
+
+3. **High-Performance Headless Endpoints**:
+   - `GET /health` & `GET /api/v1/health`: Instant uptime and service state.
+   - `POST /api/v1/jobs/extract`: Pydantic V2 validated structured requirements extraction from raw text.
+   - `POST /api/v1/candidates/match`: High-speed hybrid BM25 + dense vector ranking API.
+   - `POST /api/v1/workflow/stream`: Server-Sent Events (SSE) streaming progress milestones (`session_start`, `node_update`, `done`).
+
+
 
 

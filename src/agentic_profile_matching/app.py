@@ -1,7 +1,11 @@
-"""
-Yojaka AI (Agentic Profile Matching Engine) — Main Streamlit Application Entrypoint.
-Conductor orchestrating modular presentation components, session state, and layout.
-"""
+# Streamlit Cloud / Linux SQLite compatibility shim (requires sqlite3 >= 3.35.0 for ChromaDB)
+try:
+    __import__("pysqlite3")
+    import sys
+
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except ImportError:
+    pass
 
 from dotenv import load_dotenv
 import streamlit as st

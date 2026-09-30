@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-09-29
+### Added
+- **Layout-Aware Section Document Parsing (Deliverable 17.1)**:
+  - Created `src/agentic_profile_matching/services/section_parser.py`: Implemented `SectionParser` leveraging PyMuPDF `page.get_text("blocks")` for PDF resumes, paragraph hierarchy for DOCX, and regex boundary analysis for plain text.
+  - Preserved semantic integrity of multi-role work histories, headers, and bullet points without breaking text across mid-experience token boundaries.
+  - Normalized extracted resume sections into canonical taxonomy buckets (`SUMMARY`, `EXPERIENCE`, `SKILLS`, `EDUCATION`, `PROJECTS`, `CERTIFICATIONS`).
+- **Anthropic Contextual Retrieval Prepending (Deliverable 17.2)**:
+  - Created `src/agentic_profile_matching/services/contextual_retrieval.py`: Implemented `ContextualEnricher` situating isolated chunks with 50-80 word document metadata banners (`[Candidate: ... | Role: ... | Experience: ... | Skills: ... | Education: ...]`) prior to dense embedding and BM25 indexing.
+  - Preserves clean `raw_content` for UI rendering and deep screening evaluation while ensuring chunk vectors retain document-level candidate seniority and tech stack context.
+  - Drastically mitigates failed chunk retrievals on ambiguous, isolated work experience bullet points.
+- **Two-Stage Hybrid Retrieval & Cross-Encoder Reranking (Deliverable 17.3)**:
+  - Created `src/agentic_profile_matching/services/reranker.py`: Implemented `CrossEncoderReranker` using `cross-encoder/ms-marco-MiniLM-L-6-v2` with Sigmoid score calibration and Reciprocal Rank Fusion (`compute_rrf_scores`).
+  - Integrated Stage 2 cross-encoder reranking directly into `JobMatcher.match()`, evaluating query-candidate pairs together to eliminate semantic drift from single-vector representations.
+  - Added configurable runtime switches `RERANKER_MODEL` and `USE_RERANKER` in `config.py` with offline graceful fallback.
+- **Streamlit Cloud Deployment Resilience & In-Memory Fallback**:
+  - Resolved `VectorStoreError` crash on Streamlit Cloud by adding `pysqlite3-binary` shim on Linux platforms and disabling ChromaDB default ONNX runtime downloads (`embedding_function=None`).
+  - Created `src/agentic_profile_matching/stores/in_memory_store.py`: Built zero-disk pure Python/NumPy cosine similarity vector store conforming to `BaseVectorStore` protocol.
+  - Updated `ui/session.py` and `ChromaVectorStore` to automatically fall back to `InMemoryVectorStore` whenever ephemeral ChromaDB initialization fails in containerized serverless runtimes.
+- **License Migration**:
+  - Migrated project licensing from MIT to **Apache License 2.0**, introducing explicit contributor patent grants, trademark clarity, and enterprise protection while maintaining permissive open-source usage.
+- **Automated Quality Gates & Test Expansion**:
+  - Expanded test suite from 103 to 116 passing tests (+13 tests covering layout parsing, contextual banners, cross-encoder reranking, and in-memory store operations).
+  - Maintained 100% test pass rate with 0 Ruff lint or formatting errors.
+
 ## [1.3.0] - 2026-09-28
 ### Added
 - **Modular Streamlit UI Decomposition (Deliverable 16.1)**:

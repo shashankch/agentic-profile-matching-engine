@@ -8,6 +8,7 @@ from rank_bm25 import BM25Okapi
 
 from agentic_profile_matching import config
 from agentic_profile_matching.observability import get_logger
+from agentic_profile_matching.services.reranker import CrossEncoderReranker
 from agentic_profile_matching.stores import BaseVectorStore, ChromaVectorStore
 
 logger = get_logger("agentic_profile_matching.job_matcher")
@@ -22,12 +23,21 @@ class JobMatcher:
         store: Optional[BaseVectorStore] = None,
         model_name: Optional[str] = None,
         collection_name: str = "resumes",
+        reranker: Optional[CrossEncoderReranker] = None,
+        use_reranker: Optional[bool] = None,
     ):
         self.store = store or ChromaVectorStore(collection_name=collection_name)
         self.model_name = model_name or config.EMBEDDING_MODEL
         if self.model_name not in _EMBEDDER_CACHE:
             _EMBEDDER_CACHE[self.model_name] = SentenceTransformer(self.model_name)
         self.embedder = _EMBEDDER_CACHE[self.model_name]
+
+        # Stage 2 Precision Reranker (ADR-017 / Deliverable 17.3)
+        if use_reranker is None:
+            self.use_reranker = getattr(config, "USE_RERANKER", True)
+        else:
+            self.use_reranker = use_reranker
+        self.reranker = reranker or CrossEncoderReranker(enabled=self.use_reranker)
 
         # Cache attributes for BM25 Okapi index
         self._cached_bm25: Optional[BM25Okapi] = None
@@ -308,8 +318,18 @@ class JobMatcher:
                 }
             )
 
-        # Sort matches by score descending
+        # Sort matches by score descending (Stage 1 Coarse Ranking)
         top_matches.sort(key=lambda x: x["match_score"], reverse=True)
+
+        # Stage 2: Precision Cross-Encoder Reranking (Deliverable 17.3)
+        if self.use_reranker and len(top_matches) > 1 and self.reranker:
+            candidates_to_rerank = top_matches[: max(k * 2, 20)]
+            top_matches = self.reranker.rerank_candidates(
+                query=job_description,
+                candidates=candidates_to_rerank,
+                top_k=k,
+            )
+            return {"job_description": job_description, "top_matches": top_matches}
 
         return {"job_description": job_description, "top_matches": top_matches[:k]}
 

@@ -224,6 +224,16 @@ class MetadataExtractor:
 
 class ResumeChunker:
     def chunk(self, text: str) -> List[Dict[str, str]]:
+        try:
+            from agentic_profile_matching.services.section_parser import SectionParser
+
+            parser = SectionParser()
+            parsed = parser.parse_text(text)
+            if parsed:
+                return [{"section": p.section_title, "content": p.content} for p in parsed]
+        except Exception:
+            pass
+
         chunks = []
         current_section = "GENERAL"
         buf = []

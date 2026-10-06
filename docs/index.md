@@ -9,10 +9,10 @@
   <a href="https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/ci.yml"><img src="https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/ci.yml/badge.svg" alt="Python CI"></a>
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-v1.4.0-blue.svg" alt="Version: v1.4.0"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.14-blue.svg" alt="Python Version"></a>
-  <a href="docs/adr/README.md"><img src="https://img.shields.io/badge/ADRs-17%20Accepted-teal.svg" alt="Architecture Decision Records"></a>
+  <a href="adr/index.md"><img src="https://img.shields.io/badge/ADRs-17%20Accepted-teal.svg" alt="Architecture Decision Records"></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Linter: Ruff"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License: Apache 2.0"></a>
-  <a href="docs/CONVENTIONS.md"><img src="https://img.shields.io/badge/Conventions-Architectural-purple.svg" alt="Conventions"></a>
+  <a href="LICENSE.md"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License: Apache 2.0"></a>
+  <a href="CONVENTIONS.md"><img src="https://img.shields.io/badge/Conventions-Architectural-purple.svg" alt="Conventions"></a>
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/Contributing-Welcome-green.svg" alt="Contributing"></a>
 </p>
 
@@ -27,7 +27,7 @@
 | <small>In classical Sanskrit, <b>योजक (Yojaka)</b> derives from the root <i>युज् (yuj)</i> — meaning <i>to connect, unite, align, or orchestrate</i>. Rather than treating candidate vetting as a cold keyword gatekeeper, <b>Yojaka AI</b> operates as an intelligent orchestrator: parsing unstructured human potential, dynamically expanding semantic equivalences, and cascading through structured reasoning to match talent with purpose.</small> |
 
 <p align="center">
-  <img src="docs/assets/yojaka_demo.gif" alt="Yojaka AI End-to-End Walkthrough Demo" width="94%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.18);">
+  <img src="assets/yojaka_demo.gif" alt="Yojaka AI End-to-End Walkthrough Demo" width="94%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.18);">
 </p>
 
 ---
@@ -39,19 +39,19 @@
 - 🧠 **Anthropic Contextual Retrieval Prepending**: Situates isolated resume chunks with 50–80 word document metadata banners before dense embedding and BM25 indexing, preserving pristine candidate text for recruiter UI display.
 - ⚖️ **Two-Stage Hybrid Retrieval & Cross-Encoder Reranking**: Combines dense vector cosine similarity with BM25 Okapi lexical scoring, followed by fine-grained `cross-encoder/ms-marco-MiniLM-L-6-v2` reranking with Sigmoid score calibration and Reciprocal Rank Fusion (RRF).
 - 🔀 **LLM-Driven Intent Routing**: Zero-shot structured intent routing with dynamic exemplar synthesis and an in-memory LRU query routing cache for sub-millisecond repeated queries.
-- 🔒 **Zero-Disk In-Memory Upload & Ephemeral PII Isolation**: Ingests `.pdf`, `.docx`, and `.txt` files directly in memory via `io.BytesIO` layered through `CompositeVectorStore` with session-scoped in-memory vector stores ([ADR-016](docs/adr/ADR-016-zero-disk-in-memory-resume-ingestion.md)).
+- 🔒 **Zero-Disk In-Memory Upload & Ephemeral PII Isolation**: Ingests `.pdf`, `.docx`, and `.txt` files directly in memory via `io.BytesIO` layered through `CompositeVectorStore` with session-scoped in-memory vector stores ([ADR-016](adr/ADR-016-zero-disk-in-memory-resume-ingestion.md)).
 - 🖥️ **Dual Presentation Layer**: Clean `<75-LOC` Streamlit conductor (`app.py`) featuring `st.write_stream` typewriter streaming and live tool execution tracing, coupled with a headless FastAPI sidecar (`api/`) exposing REST and Server-Sent Events (SSE) endpoints.
-- 🔌 **Model Context Protocol (MCP) Dual Gateway**: Hot-swap between in-process tool execution and FastMCP JSON-RPC `stdio` servers ([ADR-001](docs/adr/ADR-001-mcp-dual-mode-gateway-architecture.md)).
+- 🔌 **Model Context Protocol (MCP) Dual Gateway**: Hot-swap between in-process tool execution and FastMCP JSON-RPC `stdio` servers ([ADR-001](adr/ADR-001-mcp-dual-mode-gateway-architecture.md)).
 
 ---
 
 ## 🏛️ System Architecture
 
 <p align="center">
-  <img src="docs/assets/diagrams/system_architecture.png" alt="Yojaka AI System Architecture Overview" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+  <img src="assets/diagrams/system_architecture.png" alt="Yojaka AI System Architecture Overview" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
 </p>
 
-> 📚 **Documentation & Deep Dive**: For the full interactive documentation site, visit [**shashankch.github.io/yojaka-ai-profile-matching-engine**](https://shashankch.github.io/yojaka-ai-profile-matching-engine/). For local technical architecture, mathematical scoring formulations, and security specifications, see [**docs/architecture.md**](docs/architecture.md).
+> 📚 **Documentation & Deep Dive**: For comprehensive interactive dataflow diagrams, mathematical scoring formulations, and security specifications, explore [**Technical Architecture**](architecture.md) or visit the [**Online Documentation Site**](https://shashankch.github.io/yojaka-ai-profile-matching-engine/).
 
 ---
 
@@ -60,7 +60,7 @@
 Candidate evaluation cascades across 3 tiers to optimize LLM token consumption `O(N) → O(K)`:
 
 <p align="center">
-  <img src="docs/assets/diagrams/cascading_screening_funnel.png" alt="3-Stage Cascading Screening Funnel" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+  <img src="assets/diagrams/cascading_screening_funnel.png" alt="3-Stage Cascading Screening Funnel" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
 </p>
 
 ---
@@ -112,7 +112,7 @@ cp .env.example .env
 | `TAVILY_API_KEY` | Optional | `""` | Real-time external web search for tech trends & company intelligence. |
 | `OPENAI_API_KEY` | Optional | `""` | OpenAI GPT-4o / GPT-4o-mini models. |
 
-> 💡 *For the complete configuration reference, see [Architecture Section 14](docs/architecture.md#14-environment-variables--runtime-configuration-reference) and [`.env.example`](.env.example).*
+> 💡 *For the complete configuration reference, see [Architecture Section 14](architecture.md#14-environment-variables-runtime-configuration-reference) and [`.env.example`](https://github.com/shashankch/yojaka-ai-profile-matching-engine/blob/main/.env.example).*
 
 ### 3. Generate Mock Data & Ingest
 
@@ -172,20 +172,20 @@ ruff format --check src/ tests/
 
 ## 📚 Technical Documentation & Resources
 
-- 🌐 **[Online Documentation Site (MkDocs Material)](https://shashankch.github.io/yojaka-ai-profile-matching-engine/)**: Interactive documentation hosted on GitHub Pages with instant full-text search, light/dark themes, interactive C4 architecture diagrams, and ADR catalog.
-- 🏛️ **[System Architecture & Technical Specifications](docs/architecture.md)**: Deep dive on dataflow sequences, mathematical formulations, state transitions, and distributed scaling.
-- 📐 **[Architecture Decision Records (ADRs 001–017)](docs/adr/README.md)**: Complete catalog of formal design decisions, evaluated alternatives, and trade-offs.
-- 🗺️ **[Implementation Roadmap](docs/ROADMAP.md)**: Phased milestones (Completed Phases 1–17 and Future Backlog Phases 18–20).
-- 🛡️ **[Engineering Conventions](docs/CONVENTIONS.md)**: Architectural patterns, Pydantic V2 schemas, error boundaries, and type safety rules.
+- 🌐 **[Online Documentation Site (MkDocs Material)](https://shashankch.github.io/yojaka-ai-profile-matching-engine/)**: Full interactive documentation with instant search, dark mode, high-res C4 diagrams, and ADR catalog hosted on GitHub Pages.
+- 🏛️ **[System Architecture & Technical Specifications](architecture.md)**: Deep dive on dataflow sequences, mathematical formulations, state transitions, and distributed scaling.
+- 📐 **[Architecture Decision Records (ADRs 001–017)](adr/index.md)**: Complete catalog of formal design decisions, evaluated alternatives, and trade-offs.
+- 🗺️ **[Implementation Roadmap](ROADMAP.md)**: Phased milestones (Completed Phases 1–17 and Future Backlog Phases 18–20).
+- 🛡️ **[Engineering Conventions](CONVENTIONS.md)**: Architectural patterns, Pydantic V2 schemas, error boundaries, and type safety rules.
 - 🤝 **[Contributing Guidelines](CONTRIBUTING.md)**: Local developer setup, branching conventions, and quality gates.
 - 📝 **[Changelog](CHANGELOG.md)**: Semantic versioning release history.
-- 📄 **[License](LICENSE)**: Apache License 2.0.
+- 📄 **[License](LICENSE.md)**: Apache License 2.0.
 
 ---
 
 ## ⚖️ License & Trademarks
 
-This project is licensed under the Apache License 2.0 — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 — see the [LICENSE](LICENSE.md) file for details.
 
 > ℹ️ **Trademarks & Brand Logos Notice**: All product names, logos, brands, trademarks, and registered trademarks are property of their respective owners. All company, product, and service names used in this project and documentation are for identification purposes only. Use of these names, logos, and brands does not imply endorsement.
 

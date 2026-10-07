@@ -2,7 +2,7 @@
 
 This document outlines high-level implementation milestones and strategic release targets for **Yojaka AI (Agentic Profile Matching Engine)**.
 
-> 📚 **Detailed Specifications**: For system architecture diagrams, mathematical formulations, and formal design decisions, see [**System Architecture**](architecture.md), [**Architecture Decision Records (ADRs)**](adr/README.md), and [**Changelog**](../CHANGELOG.md).
+> 📚 **Detailed Specifications**: For system architecture diagrams, mathematical formulations, and formal design decisions, see [**System Architecture**](architecture.md), [**Architecture Decision Records (ADRs)**](adr/index.md), and [**Changelog**](CHANGELOG.md).
 
 ---
 

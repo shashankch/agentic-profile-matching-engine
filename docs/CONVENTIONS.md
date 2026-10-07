@@ -102,6 +102,7 @@ Before submitting a Pull Request for ANY subphase:
 1. **Quality Gate**: `ruff check src/ tests/`, `ruff format --check src/ tests/`, and `pytest tests/ -v` MUST pass with zero errors.
 2. **CHANGELOG Sync**: `CHANGELOG.md` MUST record all added, changed, fixed, or security items under a new version tag (`[X.Y.Z] - YYYY-MM-DD`).
 3. **README Sync**: `README.md` features overview, project directory tree, and setup commands MUST be updated to reflect all newly added modules, tools, and test suites.
+4. **Diagrams & Architecture Sync**: Run `python scripts/generate_diagrams.py` and `mkdocs build --strict` whenever any architectural components, dataflows, state machines, or providers are added or altered (see Section 15).
 
 ---
 
@@ -186,6 +187,39 @@ Before submitting a Pull Request for ANY subphase:
 
 3. **Anti-XSS Candidate Data Sanitization (OWASP Standard)**
    - All candidate-derived tokens, names, education, experience, and paths interpolated into HTML UI templates (such as candidate cards in `app.py`) MUST be strictly sanitized using `html.escape(..., quote=True)` to neutralize script injection and markup tampering.
+
+---
+
+## 🎨 15. Architecture & Flow Diagrams Maintenance Protocol (Diagrams-as-Code) {: #diagrams-maintenance-protocol }
+
+To prevent architectural drift and ensure that documentation remains an exact, publication-grade representation of the codebase across all future milestones and phases, all engineers and contributors must follow these diagram maintenance protocols:
+
+1. **Diagrams as Code (`scripts/generate_diagrams.py`)**
+   - **No Manual Graphic Exports**: Visual architecture diagrams MUST NOT be edited using manual graphic editors (Figma, Photoshop, Excalidraw exports) or ad-hoc PNG uploads that desynchronize from code. All 16+ architecture diagrams are defined strictly as Python code using Mingrammer `diagrams` in `scripts/generate_diagrams.py`.
+   - **Mandatory Update Trigger**: Whenever a new development phase, architectural refactoring, storage engine, background broker, state graph node/edge, or LLM provider is added or modified, the corresponding diagram generator in `scripts/generate_diagrams.py` MUST be updated in the same pull request.
+
+2. **Standardized Styling & Layout Rules**
+   - **Cluster Padding & Zero Label Collision**: Always use the centralized `cluster_attr(bgcolor, border_color, labelloc="t"|"b", margin=...)` helper for all cluster subgraphs. The default margins (`28pt` for standard clusters, `35pt` for bottom-labeled clusters) guarantee that node text labels and badges never collide with or clip against rounded box borders.
+   - **Planar Layouts & Direction**: Maintain clean, planar 2D orientations (`direction="LR"` for horizontal dataflow sequences, `direction="TB"` for vertical hierarchical abstractions) with calibrated `ranksep` (0.9–1.3) and `nodesep` (0.7–1.0) to eliminate crossed edges.
+   - **Official High-Resolution Brand Icons**: Reference official brand icons from `docs/assets/icons/` (`streamlit.png`, `langgraph.png`, `chroma.png`, `groq.png`, `huggingface.png`, `anthropic.png`, `celery.png`, `gemini.png`, `openai.png`). Avoid low-resolution raster artifacts or generic clip art.
+   - **Provider Agnosticism**: Keep external model clusters labeled neutrally (e.g., *Pluggable LLMs (Provider-Agnostic)*) rather than locking into single-vendor paradigms.
+
+3. **Canonical State Machine Invariance**
+   - `docs/state_machine.png` and `docs/state_machine.mermaid` represent the compiled LangGraph workflow topology generated directly from `StateGraph.compile().get_graph().draw_mermaid_png()`.
+   - Preserve these canonical assets intact using `preserve_state_machine_assets()` in `scripts/generate_diagrams.py`. Only recompile them if node additions, edge conditionals, or routing states in `agent/workflow.py` are structurally altered.
+
+4. **Regeneration & Verification Command**
+   Before submitting any PR touching system architecture or dataflows, run:
+   ```bash
+   # 1. Regenerate all architecture and dataflow diagrams
+   python scripts/generate_diagrams.py
+
+   # 2. Verify all links, images, and MkDocs site build in strict mode
+   mkdocs build --strict
+   ```
+
+5. **Cross-Documentation Synchronization**
+   - When a diagram is modified, verify all markdown references in `docs/architecture.md`, `docs/index.md`, `README.md`, and the relevant ADRs in `docs/adr/` are updated simultaneously.
 
 
 

@@ -2,6 +2,8 @@
 
 This document provides the comprehensive technical architecture, dataflow sequence diagrams, mathematical scoring formulations, state machine specifications, and system designs for **Yojaka AI (Agentic Profile Matching Engine)**.
 
+> 🌐 **Interactive Documentation**: An interactive version of this architecture specification with full-text search, dark/light themes, and high-resolution diagrams is published at [**shashankch.github.io/yojaka-ai-profile-matching-engine/architecture/**](https://shashankch.github.io/yojaka-ai-profile-matching-engine/architecture/).
+
 ---
 
 ## 1. C4 Architecture — Progressive Abstraction
@@ -14,33 +16,9 @@ The system architecture is modeled using the **C4 Model** (Context → Container
 
 > _Who uses the system and what external systems does it depend on?_
 
-```mermaid
-graph TB
-    classDef person fill:#08427B,color:#fff,stroke:#073B6F,rx:50
-    classDef system fill:#1168BD,color:#fff,stroke:#0E5CA6
-    classDef external fill:#999,color:#fff,stroke:#7A7A7A
-    classDef externalDb fill:#555,color:#fff,stroke:#444
-
-    Recruiter(["👤 Recruiter / Hiring Manager\n──────────────────\nSends job descriptions,\nuploads candidate resumes,\nreviews shortlists & candidate\ncomparison reports interactively"])
-
-    Engine["⚙️ Yojaka AI (Agentic Profile Matching Engine)\n──────────────────────────────────\nCoordinates 3-round cascading candidate\nscreening: coarse ranking → LLM deep audit\n→ grounded hiring recommendations + QGen\n──────────────────────────────────\n[Python 3.12+ · LangGraph · Streamlit · FastMCP]"]
-
-    LLMs["🤖 LLM Inference Providers\n──────────────────\nGroq · Llama 3.3 70B\nGoogle Gemini 2.0 Pro\nSarvam AI 105B (Indic)\nOpenAI GPT-4o\n──────────────────\n[REST / HTTPS]"]
-
-    APM["📊 APM & Observability Platform\n──────────────────\nLangfuse · OpenTelemetry\nDatadog · AWS CloudWatch\n──────────────────\n[OTLP / HTTPS]"]
-
-    Corpus[("📁 Resume Document Store\n──────────────────\nPDF · DOCX · TXT\nZero-Disk Memory Streams / Disk\n──────────────────\n[PyMuPDF / stdio / BytesIO]")]
-
-    Recruiter -->|"Submits JD, uploads resumes,\nreviews ranked shortlists\n[HTTPS · Port 8501]"| Engine
-    Engine -->|"Requirements extraction,\ndeep profile audits, QGen\n[REST · JSON / HTTPS]"| LLMs
-    Engine -->|"Emits structured JSON logs,\n@trace_node OTLP spans\n[OTLP / HTTPS]"| APM
-    Engine -->|"Ingests layout-sorted chunks\n& in-memory resume streams\n[PyMuPDF / fs_tools / io.BytesIO]"| Corpus
-
-    class Recruiter person
-    class Engine system
-    class LLMs,APM external
-    class Corpus externalDb
-```
+<p align="center">
+  <img src="assets/diagrams/c4_level1_system_context.png" alt="C4 Level 1: System Context Diagram" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+</p>
 
 ---
 
@@ -48,50 +26,9 @@ graph TB
 
 > _What are the main deployable units, data stores, and how do they communicate?_
 
-```mermaid
-graph TB
-    classDef person fill:#08427B,color:#fff,stroke:#073B6F
-    classDef container fill:#1168BD,color:#fff,stroke:#0E5CA6
-    classDef database fill:#2E7D32,color:#fff,stroke:#1B5E20
-    classDef queue fill:#6A1B9A,color:#fff,stroke:#4A148C
-    classDef external fill:#999,color:#fff,stroke:#7A7A7A
-    classDef boundary fill:none,stroke:#CCC,stroke-dasharray:6,color:#555
-
-    Recruiter(["👤 Recruiter"])
-
-    subgraph Stack["  📦 Yojaka AI Stack  "]
-        UI["🖥️ Streamlit Presentation Layer\n─────────────────────\nDual-pane chat workspace\nSidebar & Tab In-Memory Resume Ingestion\nLive st.status node checkpoints\nComparison matrix + report export\n─────────────────────\n[Python 3.12+ · Streamlit · Port 8501]"]
-
-
-        Agent["🧠 LangGraph Agentic Workflow Engine\n─────────────────────\n9-Node StateGraph with TypedDict AgentState\nMemorySaver checkpointing per thread_id\nTimered intent router (Tier 1 + Tier 2)\n─────────────────────\n[Python 3.12 · LangGraph 0.2 · agent/]"]
-
-        Gateway["🔌 Dual-Mode Tool Gateway\n─────────────────────\nfs_client.py bridges direct in-process calls\nand stdio JSON-RPC 2.0 FastMCP transport\nToggled via USE_MCP env flag (ADR-001)\n─────────────────────\n[Python · FastMCP · mcp_client.py]"]
-
-        Workers["⚙️ Async Background Task Workers\n─────────────────────\nasync_ingest_directory: bulk PDF chunking\nasync_deep_screen_candidate: LLM batch audit\nRate-limited via task routing keys\n─────────────────────\n[Celery 5.4 · Python · ADR-006]"]
-
-        Redis[("🟥 Redis Task Broker & State Backend\n─────────────────────\nCelery task queue (FIFO)\nWorker heartbeat & execution state\n─────────────────────\n[Redis 7 Alpine · Port 6379]")]
-
-        VectorDB[("🗄️ Vector & Sparse Retrieval Index\n─────────────────────\nCompositeVectorStore: Layered hybrid storage\nBase: Read-only persistent disk pool\nEphemeral: Session-scoped in-memory PII uploads\nBM25Okapi: Sparse keyword index with invalidation\nAll upserts are idempotent (ADR-005, ADR-016)\n─────────────────────\n[ChromaDB / Qdrant · In-Memory BM25]")]
-    end
-
-    LLM_APIs["🤖 LLM Inference APIs\n[Groq · Gemini · Sarvam · OpenAI]"]
-    APM_Ext["📊 APM Backends\n[Langfuse · OpenTelemetry]"]
-
-    Recruiter -->|"Browser HTTP"| UI
-    UI -->|"execute_graph(input, thread_id)\n[In-Process / Thread]"| Agent
-    Agent -->|"Invokes tool operations\n[Python call / FastMCP stdio]"| Gateway
-    Gateway -->|"Vector similarity + BM25 queries\n[In-Memory / SQLite / HTTP]"| VectorDB
-    Agent -->|"apply_async() → Celery task\n[AMQP-over-Redis]"| Workers
-    Workers -->|"BRPOP / BLPOP task messages\n[Redis Protocol]"| Redis
-    Workers -->|"Upsert document chunks"| VectorDB
-    Agent -->|"with_structured_output()\n[HTTPS / REST]"| LLM_APIs
-    Agent -.->|"@trace_node spans\n[OTLP / JSON]"| APM_Ext
-
-    class Recruiter person
-    class UI,Agent,Gateway,Workers container
-    class Redis,VectorDB database
-    class LLM_APIs,APM_Ext external
-```
+<p align="center">
+  <img src="assets/diagrams/c4_level2_container.png" alt="C4 Level 2: Container Diagram" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+</p>
 
 ---
 
@@ -99,87 +36,9 @@ graph TB
 
 > _What are the internal components of the LangGraph Workflow Engine and how do they collaborate?_
 
-```mermaid
-graph TB
-    classDef router fill:#E65100,color:#fff,stroke:#BF360C
-    classDef node fill:#1565C0,color:#fff,stroke:#0D47A1
-    classDef state fill:#2E7D32,color:#fff,stroke:#1B5E20
-    classDef tool fill:#6A1B9A,color:#fff,stroke:#4A148C
-    classDef external fill:#999,color:#fff,stroke:#7A7A7A
-
-    subgraph AgentCore["  🧠 LangGraph Agentic Workflow Engine (agent/)  "]
-
-        subgraph Routing["  🔀 LLM-Driven Intent Routing (ADR-009)  "]
-            FastPath["⚡ Structural Fast-Path & Query Cache\nRaw multi-line JD paste (0ms)\nIn-memory LRU query cache (0ms)"]
-            PrimaryLLM["🧠 Primary Tier: LLM Intent Classifier\nwith_structured_output(RouteDecision)\nFull natural language understanding\nZero hardcoded strings or rigid anchors"]
-            DynamicAnchors["🔵 Secondary Tier: Dynamic Intent Anchors\nSentenceTransformer cosine similarity against\nLLM-synthesized intent prototypes (fallback)"]
-        end
-
-        subgraph ParseNodes["  📥 Input & Requirements Nodes  "]
-            ParseInput["parse_input_node\nPre-processes message,\ninitialises session fields"]
-            ExtractReq["extract_requirements_node\nPydantic V2 structured extraction\nof JobRequirements from raw JD text"]
-            AdjustReq["adjust_requirements_node\nApplies recruiter refinements\n(must-have updates, exp adjustments)"]
-        end
-
-        subgraph RetrievalNodes["  🔍 Retrieval & Ranking Nodes  "]
-            SearchRes["search_resumes_node\nExecutes hybrid JobMatcher query\n(dense vector + BM25 sparse)"]
-            RankCand["rank_candidates_node  [Round 1]\nMulti-factor score (0–100)\nSlices coarse Top 10 shortlist"]
-        end
-
-        subgraph ScreenNodes["  🧪 LLM Screening & Guardrail Nodes  "]
-            DeepScreen["deep_screen_node  [Round 2]\nLLM full-resume audit per profile\nExtracts strengths, gaps, status\n(copy-on-write, ADR-012)"]
-            Recommend["recommendation_node  [Round 3]\nGrounded status hierarchy\nHard safety guardrails:\nmissing skills / exp deficit overrides\nInterview QGen (3–5 tailored Qs)"]
-        end
-
-        subgraph SynthNodes["  📋 Synthesis & Conversation Nodes  "]
-            GenReport["generate_report_node\nCompiles markdown comparison\nmatrix and audit report"]
-            ConvQuery["conversational_query_node\nReAct loop: compare, Q&A,\nweb search, candidate notes"]
-        end
-
-        StateStore["🗃️ TypedDict AgentState\n+ MemorySaver Checkpoint\n─────────────────────\nAgentState per thread_id\nrequirements · shortlist · messages\nNo credentials in state (ADR-011)"]
-    end
-
-    subgraph Tools["  🔧 Tool & Service Layer  "]
-        JobMatcher["JobMatcher\nHybrid scoring engine\n(job_matcher.py)"]
-        IngestionSvc["IngestionService\nDocument chunking\n+ vector upsert"]
-        MCPTools["MCP Tool Handlers\n(fs_client.py / mcp_client.py)"]
-    end
-
-    LLMProvider["🤖 LLM Provider\n(config.py PROVIDER_REGISTRY)\n[Groq · Gemini · Sarvam · OpenAI]"]
-
-    ParseInput --> FastPath
-    FastPath -->|"raw multi-line JD"| ExtractReq
-    FastPath -->|"cache miss"| PrimaryLLM
-    PrimaryLLM -->|"sourcing / new JD"| ExtractReq
-    PrimaryLLM -->|"constraint refinement"| AdjustReq
-    PrimaryLLM -->|"tech / search / compare"| ConvQuery
-    PrimaryLLM -.->|"offline / fallback"| DynamicAnchors
-    DynamicAnchors --> ExtractReq
-    DynamicAnchors --> AdjustReq
-    DynamicAnchors --> ConvQuery
-    ExtractReq --> SearchRes
-    AdjustReq --> SearchRes
-    SearchRes --> RankCand
-    RankCand -->|"Top 10 → Top 5"| DeepScreen
-    DeepScreen --> Recommend
-    Recommend --> GenReport
-    GenReport --> StateStore
-    ConvQuery --> StateStore
-
-    SearchRes --> JobMatcher
-    GenReport --> MCPTools
-    ConvQuery --> MCPTools
-    MCPTools --> IngestionSvc
-    DeepScreen --> LLMProvider
-    Recommend --> LLMProvider
-    ExtractReq --> LLMProvider
-
-    class FastCheck,Tier1,Tier2 router
-    class ParseInput,ExtractReq,AdjustReq,SearchRes,RankCand,DeepScreen,Recommend,GenReport,ConvQuery node
-    class StateStore state
-    class JobMatcher,IngestionSvc,MCPTools tool
-    class LLMProvider external
-```
+<p align="center">
+  <img src="assets/diagrams/c4_level3_component_core.png" alt="C4 Level 3: LangGraph Agentic Core Component Diagram" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+</p>
 
 ---
 
@@ -188,6 +47,7 @@ graph TB
 2. **Protocol-Driven Abstraction**: Vector store operations conform to the `BaseVectorStore` structural protocol (`typing.Protocol`), enabling zero-code changes when switching between ChromaDB, Qdrant, or cloud vector stores.
 3. **Idempotency by Design**: Ingestion keys are deterministically generated from document names and section indices (`{file}_chunk_{idx}`), guaranteeing safe, duplicate-free re-indexing.
 4. **Cascading Cost & Latency Optimization**: Dense embedding and BM25 scoring narrow large candidate pools down to top contenders locally ($0$ LLM cost), running compute-intensive LLM deep audits strictly on the top-ranked candidates ($O(N) \to O(K)$).
+5. **Diagrams as Code & Architectural Consistency**: All 16+ visual system architectures and dataflow diagrams are defined and maintained as code in `scripts/generate_diagrams.py`. When evolving system boundaries, adding providers, or redesigning flows in future phases, diagrams must be updated and regenerated following [Engineering Conventions](CONVENTIONS.md#diagrams-maintenance-protocol).
 
 ---
 
@@ -195,76 +55,9 @@ graph TB
 
 The sequence diagram below traces the end-to-end execution lifecycle from initial job description input through coarse ranking, LLM deep screening, hiring recommendation, and conversational constraint refinement:
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Recruiter as Recruiter / Hiring Manager
-    participant UI as Streamlit UI
-    participant Ingestion as IngestionService
-    participant Agent as LangGraph Orchestrator
-    participant Parser as parse_input_node
-    participant Search as search_resumes_node
-    participant Matcher as JobMatcher (Hybrid Engine)
-    participant DeepScreen as deep_screen_node
-    participant Recommend as recommendation_node
-    participant LLM as External LLM (Groq / Gemini)
-
-    opt Zero-Disk In-Memory Resume Ingestion & Ephemeral Isolation (ADR-016)
-        Recruiter->>UI: Uploads candidate resume(s) via Tab 2
-        UI->>UI: Enforce 10MB limit & compute content digest
-        UI->>Ingestion: ingest_stream(filename, bytes) into ephemeral_store
-        Ingestion->>Matcher: Upsert vectorized chunks to ephemeral ChromaDB
-        Ingestion-->>UI: Return IngestionResult(success=True, chunks=N)
-        UI-->>Recruiter: Updated live talent pool count & candidate table
-    end
-
-    Recruiter->>UI: Submit Job Description ("Looking for Python Dev with 3+ yrs exp")
-    UI->>Agent: execute_graph(user_input, thread_id)
-    Agent->>Parser: Classify input type
-    Parser-->>Agent: route -> extract_requirements
-    Agent->>LLM: extract_requirements(jd_text)
-    LLM-->>Agent: JobRequirements(skills=['Python'], min_exp=3)
-    
-    Agent->>Search: search_resumes_node(requirements)
-    Search->>Matcher: match(query, min_exp=3, must_have=['Python'])
-    Matcher->>Matcher: 1. Vector Search + Min-Max Scaling (50%)
-    Matcher->>Matcher: 2. Stop-word Filtered BM25 (35%)
-    Matcher->>Matcher: 3. Skills/Exp Satisfaction (15%)
-    Matcher-->>Search: Top 10 Shortlisted Candidates (Coarse Filter)
-    
-    Agent->>DeepScreen: deep_screen_node(Top 5 Candidates)
-    loop For Each Top Candidate
-        DeepScreen->>LLM: deep_screen_prompt(Candidate Resume + JD)
-        LLM-->>DeepScreen: Strengths, Gaps, Status ("Strong Hire")
-    end
-    
-    Agent->>Recommend: recommendation_node()
-    Recommend->>Recommend: Apply Hard Safety Guardrails (Check Missing Skills/Exp)
-    Recommend->>LLM: generate_custom_questions(Gaps)
-    LLM-->>Recommend: 3-5 Tailored Technical Interview Questions
-    
-    Agent->>UI: Render Shortlist Cards, Comparison Matrix & Audit Reports
-    UI-->>Recruiter: Interactive Recruiter Dashboard
-    
-    opt Conversational Refinement
-        Recruiter->>UI: "Make Kubernetes a must-have skill"
-        UI->>Agent: execute_graph("Make Kubernetes a must-have", thread_id)
-        Agent->>Parser: Route -> adjust_requirements
-        Agent->>Search: Re-run Search & Scoring
-        Agent->>UI: Render Updated Shortlist + Ranking Changes Explanation
-    end
-
-    opt General Tech Inquiry / Web Search (Zero Candidate Screening)
-        Recruiter->>UI: "Tell me about graph engineering in 2026"
-        UI->>Agent: execute_graph("Tell me about graph engineering in 2026", thread_id)
-        Agent->>Parser: Route via LLM / Cache -> conversational_query
-        Agent->>ConvQuery: conversational_query_node()
-        ConvQuery->>LLM: Answer tech question / search external web
-        ConvQuery-->>Agent: Comprehensive 2026 tech analysis
-        Agent->>UI: Render chat message (Candidate shortlist unchanged)
-        UI-->>Recruiter: Direct answer without screening cards
-    end
-```
+<p align="center">
+  <img src="assets/diagrams/execution_lifecycle.png" alt="End-to-End Execution Lifecycle & Dataflow" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+</p>
 
 ---
 
@@ -326,27 +119,9 @@ Incoming recruiter messages are classified using an **LLM-Driven Intent Router w
 3. **Primary Tier — LLM Intent Classifier**: Invokes the LLM via `with_structured_output(RouteDecision)` with active session context. Provides zero-shot generalisation across natural language phrasing without hardcoded string arrays.
 4. **Secondary Tier — Dynamic Semantic Embedding Router (Fallback)**: When LLM APIs are offline or unreachable, calculates cosine similarity against dynamic intent prototypes synthesized by the LLM (`generate_dynamic_intent_anchors`) or rich semantic descriptions (`all-MiniLM-L6-v2`) with a tuned threshold ($0.20$).
 
-```mermaid
-graph TD
-    START([Start / Recruiter Input]) --> parse_input[parse_input_node]
-    
-    parse_input --> Router{"🔀 LLM-Driven Intent Router<br/>(Cache Hit 0ms ➔ Primary: LLM RouteDecision<br/>➔ Fallback: Dynamic Semantic Embeddings)"}
-    
-    Router -- "extract_requirements<br/>(New Search / JD)" --> extract_req[extract_requirements_node]
-    Router -- "conversational_query<br/>(Compare / Q&A / Web)" --> conv_query[conversational_query_node]
-    Router -- "adjust_requirements<br/>(Refine / Filter)" --> adjust_req[adjust_requirements_node]
-    
-    extract_req --> search_resumes[search_resumes_node]
-    adjust_req --> search_resumes
-    
-    search_resumes --> rank_candidates[rank_candidates_node]
-    rank_candidates --> deep_screen[deep_screen_node]
-    deep_screen --> recommend[recommendation_node]
-    recommend --> gen_report[generate_report_node]
-    
-    gen_report --> END([End / Recruiter View])
-    conv_query --> END
-```
+<p align="center">
+  <img src="assets/diagrams/state_graph_topology.png" alt="LangGraph State Machine Topology & Intent Routing" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+</p>
 
 ### C. Node Responsibilities & Specifications
 
@@ -368,30 +143,9 @@ graph TD
 
 Candidate matching in `job_matcher.py` combines dense semantic search (ChromaDB), sparse lexical search (BM25 Okapi), and hard qualification constraints into a deterministic **0–100 Match Score**.
 
-```mermaid
-graph LR
-    subgraph Inputs ["Query & Filters"]
-        JD["Job Query / Requirements"]
-        Filters["Must-Have Skills & Min Exp"]
-    end
-
-    subgraph Scoring ["Multi-Factor Scoring Pipeline"]
-        Dense["1. Dense Vector Search<br/>Min-Max Scaling (1.0 to 0.5)"]
-        Sparse["2. BM25 Sparse Search<br/>Stop-Word Filtered + Normalized"]
-        Quals["3. Qualification Ratios<br/>Skill Match % + Experience Ratio"]
-    end
-
-    subgraph Output ["Final Candidate Score (0-100)"]
-        Combined["Dynamic Weighted Sum<br/>50% Hybrid + 35% Skills + 15% Exp"]
-    end
-
-    JD --> Dense
-    JD --> Sparse
-    Filters --> Quals
-    Dense --> Combined
-    Sparse --> Combined
-    Quals --> Combined
-```
+<p align="center">
+  <img src="assets/diagrams/hybrid_search_scoring.png" alt="Hybrid Search & Multi-Factor Scoring Engine" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+</p>
 
 ### A. Algorithmic Breakdown
 
@@ -428,21 +182,9 @@ graph LR
 
 The engine implements a **Dual-Mode Gateway Architecture** (ADR-001) toggled dynamically via `config.USE_MCP`:
 
-```mermaid
-graph LR
-    Agent[LangGraph Nodes] --> Gateway[fs_client.py Gateway]
-    
-    subgraph DirectMode ["Local Mode (USE_MCP=False)"]
-        Gateway --> InProcess["Direct in-process call<br/>(fs_tools.py, job_matcher.py)"]
-    end
-
-    subgraph MCPMode ["MCP Protocol Mode (USE_MCP=True)"]
-        Gateway --> Manager["mcp_client.py ClientSession Manager"]
-        Manager --> StdioTransport["stdio JSON-RPC 2.0 Transport"]
-        StdioTransport --> FSServer["filesystem_mcp_server.py (FastMCP)"]
-        StdioTransport --> SearchServer["search_mcp_server.py (FastMCP)"]
-    end
-```
+<p align="center">
+  <img src="assets/diagrams/mcp_dual_gateway.png" alt="Dual-Mode Tool Gateway Architecture" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+</p>
 
 ### Exposed Protocol Tools & Resources
 - **Filesystem Server (`filesystem_mcp_server.py`)**:
@@ -458,30 +200,9 @@ graph LR
 
 For production deployments handling bulk document parsing and parallel LLM audits, the engine provides an asynchronous task processing layer via **Celery** and **Redis** (ADR-006):
 
-```mermaid
-graph LR
-    subgraph Producers ["Task Producers"]
-        WebUI["Streamlit Web App"]
-        MCPServer["MCP Tool Handlers"]
-    end
-
-    subgraph Broker ["Redis 7 Broker & State Backend"]
-        RedisQueue["Redis Queue (Port 6379)<br/>Task Serialization & Celery Result Backend"]
-    end
-
-    subgraph Workers ["Celery Worker Pool"]
-        Worker1["Celery Worker Process 1<br/>(async_ingest_directory)"]
-        Worker2["Celery Worker Process 2<br/>(async_deep_screen_candidate)"]
-    end
-
-    subgraph Storage ["Persistent Stores"]
-        VectorDB["ChromaDB / Qdrant"]
-    end
-
-    Producers -->|"delay() / apply_async()"| RedisQueue
-    RedisQueue --> Workers
-    Workers --> VectorDB
-```
+<p align="center">
+  <img src="assets/diagrams/celery_redis_task_queue.png" alt="Distributed Task Queue Architecture" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+</p>
 
 - **`async_ingest_directory`**: Background document chunking, PyMuPDF extraction, and idempotent vector upserting.
 - **`async_deep_screen_candidate`**: Parallel LLM candidate audits with rate-limited task batching.
@@ -551,15 +272,9 @@ LangGraph's state machine requires functional, side-effect-free node transitions
 
 ## 11. Dynamic Generative LLM Skill Expansion & Semantic Equivalence Engine (ADR-013)
 
-```mermaid
-graph LR
-    JobDesc["📄 Recruiter Job Description"] --> Extractor["LLM Requirements Extractor"]
-    Extractor --> Expansions["🧠 Generative Skill Expansions<br/>('Cloud' ➔ ['AWS', 'GCP', 'Azure', 'K8s'])"]
-    Resume["📄 Candidate Resume Text"] --> SectionParser["Open-Ended Regex Section Parser<br/>(Captures 'SKILLS:' & 'TECHNICAL SKILLS:')"]
-    Expansions --> Matcher["JobMatcher Semantic Evaluator"]
-    SectionParser --> Matcher
-    Matcher --> Satisfied["✅ Candidate Evaluated with Conceptual Equivalence"]
-```
+<p align="center">
+  <img src="assets/diagrams/generative_skill_expansion.png" alt="Dynamic Generative Skill Expansion & Semantic Equivalence" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+</p>
 
 1. **Generative Query Expansion**: Replaces brittle static manual YAML taxonomies with LLM-driven runtime expansion (`JobRequirements.skill_expansions`), dynamically associating parent skills with their ecosystem technologies.
 2. **Semantic Equivalence Verification**: `JobMatcher._skill_matches_candidate()` ensures candidates with equivalent specialized tooling (e.g. AWS or GCP) satisfy general competencies (e.g. Cloud).
@@ -569,16 +284,9 @@ graph LR
 
 ## 12. Concurrency-Controlled Asynchronous Candidate Screening (ADR-014)
 
-```mermaid
-graph TD
-    Shortlist["Top 5 Shortlisted Profiles"] --> Dispatcher["Concurrent Screening Dispatcher"]
-    Dispatcher --> Semaphore["🚦 Bounded Semaphore (max_concurrent=2)"]
-    Semaphore --> Worker1["LLM Audit Worker 1"]
-    Semaphore --> Worker2["LLM Audit Worker 2"]
-    Worker1 --> Aggregator["State Aggregator (Copy-on-Write)"]
-    Worker2 --> Aggregator
-    Aggregator --> Output["Screened Candidate State"]
-```
+<p align="center">
+  <img src="assets/diagrams/concurrency_controlled_screening.png" alt="Concurrency-Controlled Asynchronous Screening" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+</p>
 
 1. **Parallel Worker Pool**: Uses bounded `ThreadPoolExecutor` workers to audit multiple candidate profiles simultaneously.
 2. **RPM/TPM Rate-Limit Shield**: Concurrency `Semaphore` restricts simultaneous inference calls to prevent HTTP 429 errors from Groq, Gemini, or OpenAI.
@@ -588,13 +296,9 @@ graph TD
 
 ## 13. Zero-Disk In-Memory Resume Ingestion Architecture (ADR-016)
 
-```mermaid
-graph LR
-    Upload["📁 Recruiter Upload (.pdf, .docx, .txt)"] --> BytesBuffer["In-Memory Stream (io.BytesIO)"]
-    BytesBuffer --> StreamParser["PyMuPDF / docx Buffer Parser<br/>(Zero Disk Writes)"]
-    StreamParser --> ChunkEmbed["Text Chunking & Dense Embeddings"]
-    ChunkEmbed --> StoreUpsert["Vector Store (BaseVectorStore)<br/>URI: stream://{filename}"]
-```
+<p align="center">
+  <img src="assets/diagrams/zero_disk_in_memory_ingestion.png" alt="Zero-Disk In-Memory Resume Ingestion Architecture" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+</p>
 
 1. **Complete Server-Side Disk Isolation**: Ingests files directly from byte streams without writing unencrypted documents to the server filesystem (`/tmp`).
 2. **Ephemeral Cloud & Multi-Tenant Safety**: Designed for read-only containers (Streamlit Cloud, ECS, Lambda), completely eliminating file-leakage vulnerabilities (GDPR, SOC2).
@@ -611,7 +315,7 @@ Yojaka AI enforces twelve-factor application principles, managing external integ
 | Variable | Type | Default | Component Layer | Description & Security Rationale |
 |:---|:---:|:---|:---|:---|
 | `GROQ_API_KEY` | `Secret` | `""` | LLM Inference Gateway | Authentication for Groq Llama 3.3 70B inference. Stored statelessly; never serialized in graph state (ADR-011). |
-| `GEMINI_API_KEY` | `Secret` | `""` | LLM Inference Gateway | Authentication for Google Gemini 2.0 Pro / Flash. Masked in APM logs. |
+| `GEMINI_API_KEY` | `Secret` | `""` | LLM Inference Gateway | Authentication for Google Gemini 3.8 Pro / Flash. Masked in APM logs. |
 | `SARVAM_API_KEY` | `Secret` | `""` | Indic Language Models | Authentication for Sarvam AI 105B Indic LLM endpoints (ADR-010). |
 | `OPENAI_API_KEY` | `Secret` | `""` | LLM Inference Gateway | Authentication for OpenAI GPT-4o / GPT-4o-mini models. |
 | `TAVILY_API_KEY` | `Secret` | `""` | External Web Search | Real-time web search for live tech trends, external packages, and candidate portfolios. Optional; engine degrades to local mock notes if omitted. |
@@ -635,16 +339,9 @@ Yojaka AI enforces twelve-factor application principles, managing external integ
 
 ## 15. Enterprise Security, Blind Hiring & Guardrail Strategy (2026 Standards)
 
-```mermaid
-graph TD
-    Upload["📄 Untrusted Candidate Resume"] --> Sanitizer["🛡️ Indirect Prompt Injection Sanitizer<br/>(OWASP LLM01 - Invisible Text & Instruction Override Strip)"]
-    Sanitizer --> PIIVault["🔒 Reversible PII Redaction Vault<br/>(Names/Emails/Phones ➔ [CANDIDATE_A])"]
-    PIIVault --> AgentGraph["🤖 LangGraph Screening Pipeline"]
-    AgentGraph --> DualRubric["⚖️ Parallel Dual-Rubric Scoring<br/>(Rubric A: Tech Depth • Rubric B: HR Domain Fit)"]
-    DualRubric --> BiasAudit["📊 Bias & Inclusivity Audit<br/>(Global Score Parity & Fairness)"]
-    BiasAudit --> DeAnonymizer["🔓 UI De-Anonymization Vault<br/>(Rehydrates [CANDIDATE_A] ➔ Real Name for Authorized Recruiter)"]
-    DeAnonymizer --> FinalReport["📋 Verified Recruiter Report"]
-```
+<p align="center">
+  <img src="assets/diagrams/enterprise_security_guardrails.png" alt="Enterprise Security, Blind Hiring & Guardrail Strategy" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+</p>
 
 1. **Reversible Zero-Trust PII Tokenization Vault**:
    - Ingested candidate resumes are tokenized in memory (`John Doe` $\to$ `[CANDIDATE_A]`, phone/email/addresses $\to$ opaque tokens) before any text is sent to third-party LLM inference providers.
@@ -674,28 +371,9 @@ graph TD
 
 ## 16. Dual-Surface Architecture: Modular Streamlit UI & Headless FastAPI Gateway (Phase 16)
 
-```mermaid
-graph TD
-    Recruiter["👤 Recruiter Browser Session"] --> Streamlit["🖥️ Streamlit Interactive UI<br/>(app.py < 75 LOC)"]
-    ExternalClient["🌐 External SaaS Client / CI Pipeline"] --> FastAPISidecar["⚡ Headless FastAPI Sidecar<br/>(REST & SSE Streaming)"]
-    
-    subgraph UI_Layer ["Modular Presentation Layer (ui/)"]
-        Streamlit --> Styles["ui/styles.py<br/>(Glassmorphism & Theme Engine)"]
-        Streamlit --> Session["ui/session.py<br/>(State Bootstrap & Lazy Stores)"]
-        Streamlit --> Runner["ui/runner.py<br/>(Live Status & st.write_stream)"]
-        Streamlit --> Tabs["ui/components/<br/>(chat, talent_pool, matrix, deep_screen)"]
-    end
-
-    subgraph API_Layer ["Headless Gateway Layer (api/)"]
-        FastAPISidecar --> Routes["api/routes.py<br/>(/health, /jobs/extract, /candidates/match)"]
-        FastAPISidecar --> SSERoutes["api/routes.py<br/>(/api/v1/workflow/stream)"]
-    end
-
-    Runner --> AgentGraph["🤖 LangGraph Matching Workflow<br/>(matching_agent_workflow)"]
-    Routes --> AgentGraph
-    SSERoutes --> AgentGraph
-    AgentGraph --> CompositeStore["💾 CompositeVectorStore<br/>(Base ChromaDB + Ephemeral Session Store)"]
-```
+<p align="center">
+  <img src="assets/diagrams/dual_surface_ui_api.png" alt="Dual-Surface Architecture: Modular UI & Headless FastAPI Gateway" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+</p>
 
 1. **Dual-Surface Coexistence**:
    - **Streamlit (`app.py`)**: Primary interactive web dashboard for recruiters, now reduced from 946 lines to a clean `<75-line` conductor delegating rendering to focused component modules (`ui/components/chat.py`, `ui/components/talent_pool.py`, `ui/components/matrix.py`, `ui/components/deep_screen.py`).
@@ -716,24 +394,9 @@ graph TD
 
 ## 17. Layout-Aware Parsing, Anthropic Contextual Retrieval & Two-Stage Reranking (Phase 17)
 
-```mermaid
-graph TD
-    subgraph Ingestion_Stage ["1. Layout-Aware Section Parsing & Contextual Retrieval"]
-        Doc["📄 Resume File (.pdf, .docx, .txt)"] --> Parser["SectionParser<br/>(PyMuPDF get_text('blocks') / docx / regex)"]
-        Parser --> Sections["Hierarchical Sections<br/>(EXPERIENCE, SKILLS, EDUCATION)"]
-        Sections --> ContextBanner["ContextualEnricher<br/>(Anthropic Context Prepending: [Candidate | Role | Skills])"]
-        ContextBanner --> EmbedIndex["Hybrid Vector & BM25 Indexing<br/>(Contextual Text Embedded • Raw Text Preserved)"]
-    end
-
-    subgraph Two_Stage_Retrieval ["2. Two-Stage Hybrid Retrieval & Cross-Encoder Reranking"]
-        Query["🔍 Recruiter Query / Job Requirements"] --> Stage1["Stage 1: Coarse Hybrid Retrieval<br/>(Dense Vector Cosine + BM25 Lexical)"]
-        EmbedIndex --> Stage1
-        Stage1 --> TopCandidates["Top-N Shortlisted Candidates"]
-        TopCandidates --> Stage2["Stage 2: Cross-Encoder Joint Reranker<br/>(cross-encoder/ms-marco-MiniLM-L-6-v2)"]
-        Stage2 --> Calibrator["Sigmoid Calibration & Reciprocal Rank Fusion (RRF)"]
-        Calibrator --> FinalRank["🏆 Calibrated Top Candidates<br/>(Passed to Deep Screening & Matrix)"]
-    end
-```
+<p align="center">
+  <img src="assets/diagrams/layout_parsing_two_stage_rerank.png" alt="Layout-Aware Parsing, Contextual Retrieval & Two-Stage Reranking" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+</p>
 
 ### 17.1 Layout-Aware Section Parsing (`services/section_parser.py`)
 Traditional naive text splitters split documents by fixed character or token counts, frequently cutting across work experiences, separating company names from responsibilities, and losing bullet point context.

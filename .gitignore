@@ -87,6 +87,8 @@ MANIFEST
 ### Internal docs & tracking files (never committed) ###
 internal/
 internal/*
-
 # Scratch utilities
 scratch/
+
+# MkDocs build directory
+site/

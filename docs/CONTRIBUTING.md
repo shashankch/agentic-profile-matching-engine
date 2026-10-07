@@ -116,9 +116,9 @@ python -m agentic_profile_matching.run_scenarios
 ## 📐 Architectural Guidelines & Conventions
 
 Before submitting non-trivial PRs, please review:
-- [Engineering Conventions](docs/CONVENTIONS.md) (`docs/CONVENTIONS.md`)
-- [Technical Architecture](docs/architecture.md) (`docs/architecture.md`)
-- [Architecture Decision Records](docs/adr/README.md) (`docs/adr/README.md`)
+- [Engineering Conventions](CONVENTIONS.md) (`docs/CONVENTIONS.md`)
+- [Technical Architecture](architecture.md) (`docs/architecture.md`)
+- [Architecture Decision Records](adr/index.md) (`docs/adr/`)
 
 Key standards to uphold:
 1. **Stateless Credential Isolation (ADR-011 / CWE-312)**: NEVER store API keys or provider secrets inside `AgentState`. Inject credentials strictly at runtime via `RunnableConfig` (`configurable["api_key"]`).
@@ -128,7 +128,7 @@ Key standards to uphold:
 5. **Zero-Disk In-Memory Ingestion (ADR-016)**: Process candidate uploads directly in memory via `io.BytesIO` streams; do not write unencrypted candidate files to `/tmp`.
 6. **Structured JSON Logging**: Use `get_logger()` from `agentic_profile_matching.observability` and `@trace_node` decorators; avoid unformatted `print()` calls in production modules.
 7. **Clean Separation of Concerns**: Keep domain logic decoupled from presentation (Streamlit) and transport protocols (MCP).
-8. **Diagrams-as-Code Maintenance Protocol**: Whenever introducing new phases, altering architecture, adding providers/storage backends, or changing state graph dataflows, update the corresponding diagram generator in `scripts/generate_diagrams.py`, regenerate via `python scripts/generate_diagrams.py`, and verify with `mkdocs build --strict` (see [Engineering Conventions](docs/CONVENTIONS.md#diagrams-maintenance-protocol)).
+8. **Diagrams-as-Code Maintenance Protocol**: Whenever introducing new phases, altering architecture, adding providers/storage backends, or changing state graph dataflows, update the corresponding diagram generator in `scripts/generate_diagrams.py`, regenerate via `python scripts/generate_diagrams.py`, and verify with `mkdocs build --strict` (see [Engineering Conventions](CONVENTIONS.md#diagrams-maintenance-protocol)).
 
 ---
 
@@ -146,7 +146,7 @@ Key standards to uphold:
    - [ ] `pytest tests/ -v` passes (all unit and integration tests green).
    - [ ] `ruff check .` and `ruff format --check .` pass with 0 warnings.
    - [ ] Version incremented in `pyproject.toml` and release notes added to `CHANGELOG.md`.
-   - [ ] Documentation updated in `README.md`, `docs/ROADMAP.md`, or `docs/adr/` if architectural changes were introduced.
+   - [ ] Documentation updated in `README.md`, `ROADMAP.md`, or `adr/` if architectural changes were introduced.
    - [ ] Architecture diagrams updated in `scripts/generate_diagrams.py` and regenerated via `python scripts/generate_diagrams.py` if design/arch/flow changes were introduced.
    - [ ] Documentation site verified cleanly via `mkdocs build --strict`.
 

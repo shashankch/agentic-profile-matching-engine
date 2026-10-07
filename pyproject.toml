@@ -9,6 +9,7 @@ description = "Yojaka AI: Production-grade Agentic Profile Matching Engine"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.10"
+
 dependencies = [
     "chromadb>=1.5.9",
     "pysqlite3-binary; sys_platform == 'linux'",
@@ -34,6 +35,13 @@ dependencies = [
     "redis>=5.0.0"
 ]
 
+[project.urls]
+Homepage = "https://github.com/shashankch/yojaka-ai-profile-matching-engine"
+Documentation = "https://shashankch.github.io/yojaka-ai-profile-matching-engine/"
+Repository = "https://github.com/shashankch/yojaka-ai-profile-matching-engine"
+Changelog = "https://github.com/shashankch/yojaka-ai-profile-matching-engine/blob/main/CHANGELOG.md"
+
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
@@ -41,6 +49,13 @@ dev = [
     "pytest-mock>=3.14.0",
     "ruff>=0.5.0",
     "mypy>=1.10.0",
+]
+docs = [
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocs-minify-plugin>=0.8.0",
+    "diagrams>=0.23.0",
+    "pillow>=10.0.0",
 ]
 
 [tool.setuptools.packages.find]

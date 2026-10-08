@@ -8,53 +8,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.4.0] - 2026-09-29
 ### Added
 - **Layout-Aware Section Document Parsing (Deliverable 17.1)**:
-  - Created `src/agentic_profile_matching/services/section_parser.py`: Implemented `SectionParser` leveraging PyMuPDF `page.get_text("blocks")` for PDF resumes, paragraph hierarchy for DOCX, and regex boundary analysis for plain text.
-  - Preserved semantic integrity of multi-role work histories, headers, and bullet points without breaking text across mid-experience token boundaries.
-  - Normalized extracted resume sections into canonical taxonomy buckets (`SUMMARY`, `EXPERIENCE`, `SKILLS`, `EDUCATION`, `PROJECTS`, `CERTIFICATIONS`).
+    - Created `src/agentic_profile_matching/services/section_parser.py`: Implemented `SectionParser` leveraging PyMuPDF `page.get_text("blocks")` for PDF resumes, paragraph hierarchy for DOCX, and regex boundary analysis for plain text.
+    - Preserved semantic integrity of multi-role work histories, headers, and bullet points without breaking text across mid-experience token boundaries.
+    - Normalized extracted resume sections into canonical taxonomy buckets (`SUMMARY`, `EXPERIENCE`, `SKILLS`, `EDUCATION`, `PROJECTS`, `CERTIFICATIONS`).
 - **Anthropic Contextual Retrieval Prepending (Deliverable 17.2)**:
-  - Created `src/agentic_profile_matching/services/contextual_retrieval.py`: Implemented `ContextualEnricher` situating isolated chunks with 50-80 word document metadata banners (`[Candidate: ... | Role: ... | Experience: ... | Skills: ... | Education: ...]`) prior to dense embedding and BM25 indexing.
-  - Preserves clean `raw_content` for UI rendering and deep screening evaluation while ensuring chunk vectors retain document-level candidate seniority and tech stack context.
-  - Drastically mitigates failed chunk retrievals on ambiguous, isolated work experience bullet points.
+    - Created `src/agentic_profile_matching/services/contextual_retrieval.py`: Implemented `ContextualEnricher` situating isolated chunks with 50-80 word document metadata banners (`[Candidate: ... | Role: ... | Experience: ... | Skills: ... | Education: ...]`) prior to dense embedding and BM25 indexing.
+    - Preserves clean `raw_content` for UI rendering and deep screening evaluation while ensuring chunk vectors retain document-level candidate seniority and tech stack context.
+    - Drastically mitigates failed chunk retrievals on ambiguous, isolated work experience bullet points.
 - **Two-Stage Hybrid Retrieval & Cross-Encoder Reranking (Deliverable 17.3)**:
-  - Created `src/agentic_profile_matching/services/reranker.py`: Implemented `CrossEncoderReranker` using `cross-encoder/ms-marco-MiniLM-L-6-v2` with Sigmoid score calibration and Reciprocal Rank Fusion (`compute_rrf_scores`).
-  - Integrated Stage 2 cross-encoder reranking directly into `JobMatcher.match()`, evaluating query-candidate pairs together to eliminate semantic drift from single-vector representations.
-  - Added configurable runtime switches `RERANKER_MODEL` and `USE_RERANKER` in `config.py` with offline graceful fallback.
+    - Created `src/agentic_profile_matching/services/reranker.py`: Implemented `CrossEncoderReranker` using `cross-encoder/ms-marco-MiniLM-L-6-v2` with Sigmoid score calibration and Reciprocal Rank Fusion (`compute_rrf_scores`).
+    - Integrated Stage 2 cross-encoder reranking directly into `JobMatcher.match()`, evaluating query-candidate pairs together to eliminate semantic drift from single-vector representations.
+    - Added configurable runtime switches `RERANKER_MODEL` and `USE_RERANKER` in `config.py` with offline graceful fallback.
 - **Streamlit Cloud Deployment Resilience & In-Memory Fallback**:
-  - Resolved `VectorStoreError` crash on Streamlit Cloud by adding `pysqlite3-binary` shim on Linux platforms and disabling ChromaDB default ONNX runtime downloads (`embedding_function=None`).
-  - Created `src/agentic_profile_matching/stores/in_memory_store.py`: Built zero-disk pure Python/NumPy cosine similarity vector store conforming to `BaseVectorStore` protocol.
-  - Updated `ui/session.py` and `ChromaVectorStore` to automatically fall back to `InMemoryVectorStore` whenever ephemeral ChromaDB initialization fails in containerized serverless runtimes.
+    - Resolved `VectorStoreError` crash on Streamlit Cloud by adding `pysqlite3-binary` shim on Linux platforms and disabling ChromaDB default ONNX runtime downloads (`embedding_function=None`).
+    - Created `src/agentic_profile_matching/stores/in_memory_store.py`: Built zero-disk pure Python/NumPy cosine similarity vector store conforming to `BaseVectorStore` protocol.
+    - Updated `ui/session.py` and `ChromaVectorStore` to automatically fall back to `InMemoryVectorStore` whenever ephemeral ChromaDB initialization fails in containerized serverless runtimes.
 - **License Migration**:
-  - Migrated project licensing from MIT to **Apache License 2.0**, introducing explicit contributor patent grants, trademark clarity, and enterprise protection while maintaining permissive open-source usage.
+    - Migrated project licensing from MIT to **Apache License 2.0**, introducing explicit contributor patent grants, trademark clarity, and enterprise protection while maintaining permissive open-source usage.
 - **Automated Quality Gates & Test Expansion**:
-  - Expanded test suite from 103 to 116 passing tests (+13 tests covering layout parsing, contextual banners, cross-encoder reranking, and in-memory store operations).
-  - Maintained 100% test pass rate with 0 Ruff lint or formatting errors.
+    - Expanded test suite from 103 to 116 passing tests (+13 tests covering layout parsing, contextual banners, cross-encoder reranking, and in-memory store operations).
+    - Maintained 100% test pass rate with 0 Ruff lint or formatting errors.
 
 ## [1.3.0] - 2026-09-28
 ### Added
 - **Modular Streamlit UI Decomposition (Deliverable 16.1)**:
-  - Decomposed monolithic 946-LOC `app.py` into a clean, testable `<75-LOC` conductor delegating to a modular `src/agentic_profile_matching/ui/` package.
-  - Created `ui/styles.py`: Bespoke glassmorphic tokens, CSS variables, Outfit typography, adaptive dark/light themes with auto-detect DOM MutationObserver.
-  - Created `ui/session.py`: Lazy vector store bootstrap (`ensure_vector_store_initialized()`) with 0.03s instant cold startup, session state initialization, and reset handlers.
-  - Created `ui/runner.py`: Streamlit workflow runner (`run_agent_workflow_with_status()`), text chunk generator (`stream_text_chunks()`), and execution event wrappers.
-  - Created `ui/components/sidebar.py`: Zero-scroll recruiter sidebar with LLM setup, Tavily/DuckDuckGo web search key input, candidate retrieval count limits, and live active requirements constraint editor.
-  - Created `ui/components/chat.py`: Interactive recruiter conversation tab with typewriter response streaming, message history, and user input conductor.
-  - Created `ui/components/talent_pool.py`: In-memory zero-disk multi-format resume drag-and-drop uploader (`.pdf`, `.docx`, `.txt`) and active candidate corpus inventory.
-  - Created `ui/components/matrix.py`: Head-to-head candidate comparison matrix with XSS-sanitized profile cards, score badges, strengths/gaps, and tailored interview questions.
-  - Created `ui/components/deep_screen.py`: Dedicated deep screening analysis tab displaying comprehensive candidate audits and role fit evaluations.
+    - Decomposed monolithic 946-LOC `app.py` into a clean, testable `<75-LOC` conductor delegating to a modular `src/agentic_profile_matching/ui/` package.
+    - Created `ui/styles.py`: Bespoke glassmorphic tokens, CSS variables, Outfit typography, adaptive dark/light themes with auto-detect DOM MutationObserver.
+    - Created `ui/session.py`: Lazy vector store bootstrap (`ensure_vector_store_initialized()`) with 0.03s instant cold startup, session state initialization, and reset handlers.
+    - Created `ui/runner.py`: Streamlit workflow runner (`run_agent_workflow_with_status()`), text chunk generator (`stream_text_chunks()`), and execution event wrappers.
+    - Created `ui/components/sidebar.py`: Zero-scroll recruiter sidebar with LLM setup, Tavily/DuckDuckGo web search key input, candidate retrieval count limits, and live active requirements constraint editor.
+    - Created `ui/components/chat.py`: Interactive recruiter conversation tab with typewriter response streaming, message history, and user input conductor.
+    - Created `ui/components/talent_pool.py`: In-memory zero-disk multi-format resume drag-and-drop uploader (`.pdf`, `.docx`, `.txt`) and active candidate corpus inventory.
+    - Created `ui/components/matrix.py`: Head-to-head candidate comparison matrix with XSS-sanitized profile cards, score badges, strengths/gaps, and tailored interview questions.
+    - Created `ui/components/deep_screen.py`: Dedicated deep screening analysis tab displaying comprehensive candidate audits and role fit evaluations.
 - **Streamlit-Native Real-Time Streaming & Tool Visibility (Deliverable 16.2)**:
-  - Integrated `st.write_stream()` token generator for fluid, typewriter-style conversational responses in recruiter chat, eliminating frozen waiting spinners.
-  - Implemented dynamic intent-aware `st.status` headers (`"🌐 Researching external query & trends..."` vs `"📋 Recruiter Agent is analyzing candidates..."`).
-  - Added intra-node tool progress tracking and live status indicators for `search_web_tool` (Tavily/DuckDuckGo) and candidate retrieval operations.
+    - Integrated `st.write_stream()` token generator for fluid, typewriter-style conversational responses in recruiter chat, eliminating frozen waiting spinners.
+    - Implemented dynamic intent-aware `st.status` headers (`"🌐 Researching external query & trends..."` vs `"📋 Recruiter Agent is analyzing candidates..."`).
+    - Added intra-node tool progress tracking and live status indicators for `search_web_tool` (Tavily/DuckDuckGo) and candidate retrieval operations.
 - **Headless FastAPI Gateway Sidecar (Deliverable 16.3)**:
-  - Created `src/agentic_profile_matching/api/` package with an additive, decoupled ASGI sidecar architecture.
-  - Created `api/schemas.py`: Pydantic V2 request/response contracts for health checks, job requirement extraction, candidate matching, and streaming.
-  - Created `api/routes.py`: REST endpoints (`GET /health`, `GET /api/v1/health`, `POST /api/v1/jobs/extract`, `POST /api/v1/candidates/match`) and real-time Server-Sent Events (`GET /api/v1/workflow/stream`).
-  - Created `api/app.py`: FastAPI application factory (`create_app()`) with CORS middleware and OpenAPI interactive documentation (`/docs`).
-  - Created `api/main.py`: Standalone CLI runner for `uvicorn`.
+    - Created `src/agentic_profile_matching/api/` package with an additive, decoupled ASGI sidecar architecture.
+    - Created `api/schemas.py`: Pydantic V2 request/response contracts for health checks, job requirement extraction, candidate matching, and streaming.
+    - Created `api/routes.py`: REST endpoints (`GET /health`, `GET /api/v1/health`, `POST /api/v1/jobs/extract`, `POST /api/v1/candidates/match`) and real-time Server-Sent Events (`GET /api/v1/workflow/stream`).
+    - Created `api/app.py`: FastAPI application factory (`create_app()`) with CORS middleware and OpenAPI interactive documentation (`/docs`).
+    - Created `api/main.py`: Standalone CLI runner for `uvicorn`.
 - **Automated Quality Gates & Unit Testing**:
-  - Added `tests/test_ui_components.py` (12 unit tests validating modular UI components, session state, styles, sidebar, chat, and matrix).
-  - Added `tests/test_api.py` (4 integration tests validating FastAPI health check, job extraction, candidate matching, and SSE streaming).
-  - Maintained 100% test pass rate across 103 unit/integration tests with 0 Ruff lint/format errors.
+    - Added `tests/test_ui_components.py` (12 unit tests validating modular UI components, session state, styles, sidebar, chat, and matrix).
+    - Added `tests/test_api.py` (4 integration tests validating FastAPI health check, job extraction, candidate matching, and SSE streaming).
+    - Maintained 100% test pass rate across 103 unit/integration tests with 0 Ruff lint/format errors.
 
 ## [1.2.1] - 2026-09-13
 ### Added

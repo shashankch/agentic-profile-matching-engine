@@ -12,10 +12,10 @@ Thank you for your interest in contributing to **Yojaka AI (Agentic Profile Matc
 - **Package Manager**: Standard `pip` (or `uv` for high-performance dependency management)
 - **Git**: For version control and submitting Pull Requests
 - **API Keys**: At least one supported LLM inference provider:
-  - Groq (`GROQ_API_KEY`)
-  - Google Gemini (`GEMINI_API_KEY`)
-  - Sarvam AI (`SARVAM_API_KEY`)
-  - OpenAI (`OPENAI_API_KEY`)
+    - Groq (`GROQ_API_KEY`)
+    - Google Gemini (`GEMINI_API_KEY`)
+    - Sarvam AI (`SARVAM_API_KEY`)
+    - OpenAI (`OPENAI_API_KEY`)
 - **Live Search Key (Optional)**: Tavily AI (`TAVILY_API_KEY`) for real-time external web searching and candidate portfolio verification.
 
 ---
@@ -116,11 +116,13 @@ python -m agentic_profile_matching.run_scenarios
 ## 📐 Architectural Guidelines & Conventions
 
 Before submitting non-trivial PRs, please review:
+
 - [Engineering Conventions](CONVENTIONS.md) (`docs/CONVENTIONS.md`)
 - [Technical Architecture](architecture.md) (`docs/architecture.md`)
 - [Architecture Decision Records](adr/index.md) (`docs/adr/`)
 
 Key standards to uphold:
+
 1. **Stateless Credential Isolation (ADR-011 / CWE-312)**: NEVER store API keys or provider secrets inside `AgentState`. Inject credentials strictly at runtime via `RunnableConfig` (`configurable["api_key"]`).
 2. **Functional State Immutability (ADR-012)**: Node functions must never mutate `AgentState` or nested candidate dictionaries in place. Always construct fresh dictionaries (`{**c, ...}`) to ensure LangGraph checkpoint retry safety.
 3. **Dynamic Generative Skill Expansion (ADR-013)**: Avoid static manual taxonomy YAML files for domain vocabulary. Use LLM generative `skill_expansions` to evaluate semantic technology equivalence.
@@ -136,19 +138,20 @@ Key standards to uphold:
 
 1. **Conventional Commits**
    Format: `<type>(<scope>): <short summary>`
-   - `feat(ingestion): add in-memory stream resume parsing`
-   - `fix(matching): resolve semantic skill expansion evaluation`
-   - `refactor(state): enforce copy-on-write immutability in deep screen`
-   - `docs(adr): document zero-disk stream ingestion architecture`
-   - `test(matcher): add test cases for cloud skill expansion`
+
+    - `feat(ingestion): add in-memory stream resume parsing`
+    - `fix(matching): resolve semantic skill expansion evaluation`
+    - `refactor(state): enforce copy-on-write immutability in deep screen`
+    - `docs(adr): document zero-disk stream ingestion architecture`
+    - `test(matcher): add test cases for cloud skill expansion`
 
 2. **Pre-PR Checklist**
-   - [ ] `pytest tests/ -v` passes (all unit and integration tests green).
-   - [ ] `ruff check .` and `ruff format --check .` pass with 0 warnings.
-   - [ ] Version incremented in `pyproject.toml` and release notes added to `CHANGELOG.md`.
-   - [ ] Documentation updated in `README.md`, `ROADMAP.md`, or `adr/` if architectural changes were introduced.
-   - [ ] Architecture diagrams updated in `scripts/generate_diagrams.py` and regenerated via `python scripts/generate_diagrams.py` if design/arch/flow changes were introduced.
-   - [ ] Documentation site verified cleanly via `mkdocs build --strict`.
+    - [ ] `pytest tests/ -v` passes (all unit and integration tests green).
+    - [ ] `ruff check .` and `ruff format --check .` pass with 0 warnings.
+    - [ ] Version incremented in `pyproject.toml` and release notes added to `CHANGELOG.md`.
+    - [ ] Documentation updated in `README.md`, `ROADMAP.md`, or `adr/` if architectural changes were introduced.
+    - [ ] Architecture diagrams updated in `scripts/generate_diagrams.py` and regenerated via `python scripts/generate_diagrams.py` if design/arch/flow changes were introduced.
+    - [ ] Documentation site verified cleanly via `mkdocs build --strict`.
 
 Thank you for helping make **Yojaka AI** better! 🌟
 

@@ -4,7 +4,7 @@
 Implemented (Released in `v1.2.0`, Phase 15)
 
 ## Context
-Sequential execution of multi-candidate deep text screening in `deep_screen_node` (5 candidates $\times$ ~15s LLM audit) introduces 60–75 seconds of blocking latency, freezing web UI event loops. Unbounded parallel execution, however, triggers immediate HTTP 429 Rate Limit exceptions (RPM/TPM exhaustion) from cloud inference providers.
+Sequential execution of multi-candidate deep text screening in `deep_screen_node` (5 candidates × ~15s LLM audit) introduces 60–75 seconds of blocking latency, freezing web UI event loops. Unbounded parallel execution, however, triggers immediate HTTP 429 Rate Limit exceptions (RPM/TPM exhaustion) from cloud inference providers.
 
 ## Decision
 1. **Bounded Concurrency Pool**: Implement concurrent candidate evaluation using `concurrent.futures.ThreadPoolExecutor` paired with a concurrency `threading.Semaphore(max_concurrent=2)`.

@@ -1,40 +1,33 @@
-<div align="center">
-
 # 💼 Yojaka AI (Agentic Profile Matching Engine)
 
-<p align="center">
-  <a href="https://yojaka-ai-job-profile-matching-engine.streamlit.app/"><img src="https://static.streamlit.io/badges/streamlit_badge_black_white.svg" alt="Streamlit App"></a>
-  <a href="https://shashankch.github.io/yojaka-ai-profile-matching-engine/"><img src="https://img.shields.io/badge/Docs-MkDocs_Material-blueviolet.svg" alt="Documentation Site"></a>
-  <a href="https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/deploy-docs.yml"><img src="https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/deploy-docs.yml/badge.svg" alt="Documentation Deploy CI"></a>
-  <a href="https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/ci.yml"><img src="https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/ci.yml/badge.svg" alt="Python CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-v1.4.0-blue.svg" alt="Version: v1.4.0"></a>
-  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.14-blue.svg" alt="Python Version"></a>
-  <a href="adr/index.md"><img src="https://img.shields.io/badge/ADRs-17%20Accepted-teal.svg" alt="Architecture Decision Records"></a>
-  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Linter: Ruff"></a>
-  <a href="LICENSE.md"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License: Apache 2.0"></a>
-  <a href="CONVENTIONS.md"><img src="https://img.shields.io/badge/Conventions-Architectural-purple.svg" alt="Conventions"></a>
-  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/Contributing-Welcome-green.svg" alt="Contributing"></a>
-</p>
-
-<p align="center">
-  <strong>Production-Grade AI Recruiter & Profile Matching Engine built with LangGraph, Layout-Aware Section Parsing, Anthropic Contextual Retrieval, Two-Stage Cross-Encoder Reranking, Hybrid RAG, Dynamic Semantic Skill Expansion, Zero-Disk In-Memory Upload, and Model Context Protocol (MCP).</strong>
-</p>
-
+<div class="hero-badges" markdown="1">
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://yojaka-ai-job-profile-matching-engine.streamlit.app/)
+[![Documentation Site](https://img.shields.io/badge/Docs-MkDocs_Material-blueviolet.svg)](https://shashankch.github.io/yojaka-ai-profile-matching-engine/)
+[![Documentation Deploy CI](https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/deploy-docs.yml/badge.svg)](https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/deploy-docs.yml)
+[![Python CI](https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/ci.yml)
+[![Version: v1.4.0](https://img.shields.io/badge/version-v1.4.0-blue.svg)](CHANGELOG.md)
+[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.14-blue.svg)](https://www.python.org/)
+[![Architecture Decision Records](https://img.shields.io/badge/ADRs-17%20Accepted-teal.svg)](adr/index.md)
+[![Linter: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE.md)
+[![Conventions](https://img.shields.io/badge/Conventions-Architectural-purple.svg)](CONVENTIONS.md)
+[![Contributing](https://img.shields.io/badge/Contributing-Welcome-green.svg)](CONTRIBUTING.md)
 </div>
 
-| 💡 **What is Yojaka (योजक)?** |
-| :--- |
-| <small>In classical Sanskrit, <b>योजक (Yojaka)</b> derives from the root <i>युज् (yuj)</i> — meaning <i>to connect, unite, align, or orchestrate</i>. Rather than treating candidate vetting as a cold keyword gatekeeper, <b>Yojaka AI</b> operates as an intelligent orchestrator: parsing unstructured human potential, dynamically expanding semantic equivalences, and cascading through structured reasoning to match talent with purpose.</small> |
-
-<p align="center">
-  <img src="assets/yojaka_demo.gif" alt="Yojaka AI End-to-End Walkthrough Demo" width="94%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.18);">
+<p class="hero-subtitle">
+Production-Grade AI Recruiter &amp; Profile Matching Engine built with <strong>LangGraph</strong>, <strong>Layout-Aware Section Parsing</strong>, <strong>Anthropic Contextual Retrieval</strong>, <strong>Two-Stage Cross-Encoder Reranking</strong>, <strong>Hybrid RAG</strong>, <strong>Dynamic Skill Expansion</strong>, <strong>Zero-Disk In-Memory Upload</strong>, and <strong>Model Context Protocol (MCP)</strong>.
 </p>
+
+!!! quote "💡 What is Yojaka (योजक)?"
+    In classical Sanskrit, **योजक (Yojaka)** derives from the root *युज् (yuj)* — meaning *to connect, unite, align, or orchestrate*. Rather than treating candidate vetting as a cold keyword gatekeeper, **Yojaka AI** operates as an intelligent orchestrator: parsing unstructured human potential, dynamically expanding semantic equivalences, and cascading through structured reasoning to match talent with purpose.
+
+![Yojaka AI End-to-End Walkthrough Demo](assets/yojaka_demo.gif){ .diagram-image width="94%" }
 
 ---
 
 ## ⚡ Core Highlights & Capabilities
 
-- 🎯 **3-Stage Cascading Funnel (`O(N) → O(K)`)**: Coarse hybrid vector/lexical retrieval (Stage 1) $\to$ structured LLM profile audit (Stage 2) $\to$ grounded decision synthesis with tailored interview questions (Stage 3). Eliminates rate-limit bottlenecks and token exhaustion.
+- 🎯 **3-Stage Cascading Funnel (`O(N) → O(K)`)**: Coarse hybrid vector/lexical retrieval (Stage 1) → structured LLM profile audit (Stage 2) → grounded decision synthesis with tailored interview questions (Stage 3). Eliminates rate-limit bottlenecks and token exhaustion.
 - 📑 **Layout-Aware Section Document Parsing**: Parses PDF visual layout blocks (`pymupdf`), DOCX paragraph runs, and text delimiters into canonical sections (`SUMMARY`, `EXPERIENCE`, `SKILLS`, `EDUCATION`), preserving multi-role work histories without mid-sentence truncation.
 - 🧠 **Anthropic Contextual Retrieval Prepending**: Situates isolated resume chunks with 50–80 word document metadata banners before dense embedding and BM25 indexing, preserving pristine candidate text for recruiter UI display.
 - ⚖️ **Two-Stage Hybrid Retrieval & Cross-Encoder Reranking**: Combines dense vector cosine similarity with BM25 Okapi lexical scoring, followed by fine-grained `cross-encoder/ms-marco-MiniLM-L-6-v2` reranking with Sigmoid score calibration and Reciprocal Rank Fusion (RRF).
@@ -47,9 +40,7 @@
 
 ## 🏛️ System Architecture
 
-<p align="center">
-  <img src="assets/diagrams/system_architecture.png" alt="Yojaka AI System Architecture Overview" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
-</p>
+![Yojaka AI System Architecture Overview](assets/diagrams/system_architecture.png){ .diagram-image width="96%" }
 
 > 📚 **Documentation & Deep Dive**: For comprehensive interactive dataflow diagrams, mathematical scoring formulations, and security specifications, explore [**Technical Architecture**](architecture.md) or visit the [**Online Documentation Site**](https://shashankch.github.io/yojaka-ai-profile-matching-engine/).
 
@@ -59,9 +50,7 @@
 
 Candidate evaluation cascades across 3 tiers to optimize LLM token consumption `O(N) → O(K)`:
 
-<p align="center">
-  <img src="assets/diagrams/cascading_screening_funnel.png" alt="3-Stage Cascading Screening Funnel" width="96%" style="border-radius: 8px; border: 1px solid #334155; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
-</p>
+![3-Stage Cascading Screening Funnel](assets/diagrams/cascading_screening_funnel.png){ .diagram-image width="96%" }
 
 ---
 

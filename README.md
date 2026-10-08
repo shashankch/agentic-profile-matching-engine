@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <strong>Production-Grade AI Recruiter & Profile Matching Engine built with LangGraph, Layout-Aware Section Parsing, Anthropic Contextual Retrieval, Two-Stage Cross-Encoder Reranking, Hybrid RAG, Dynamic Semantic Skill Expansion, Zero-Disk In-Memory Upload, and Model Context Protocol (MCP).</strong>
+  Production-Grade AI Recruiter &amp; Profile Matching Engine built with <b>LangGraph</b>, <b>Layout-Aware Section Parsing</b>, <b>Anthropic Contextual Retrieval</b>, <b>Two-Stage Cross-Encoder Reranking</b>, <b>Hybrid RAG</b>, <b>Dynamic Semantic Skill Expansion</b>, <b>Zero-Disk In-Memory Upload</b>, and <b>Model Context Protocol (MCP)</b>.
 </p>
 
 </div>
@@ -34,7 +34,7 @@
 
 ## ⚡ Core Highlights & Capabilities
 
-- 🎯 **3-Stage Cascading Funnel (`O(N) → O(K)`)**: Coarse hybrid vector/lexical retrieval (Stage 1) $\to$ structured LLM profile audit (Stage 2) $\to$ grounded decision synthesis with tailored interview questions (Stage 3). Eliminates rate-limit bottlenecks and token exhaustion.
+- 🎯 **3-Stage Cascading Funnel (`O(N) → O(K)`)**: Coarse hybrid vector/lexical retrieval (Stage 1) → structured LLM profile audit (Stage 2) → grounded decision synthesis with tailored interview questions (Stage 3). Eliminates rate-limit bottlenecks and token exhaustion.
 - 📑 **Layout-Aware Section Document Parsing**: Parses PDF visual layout blocks (`pymupdf`), DOCX paragraph runs, and text delimiters into canonical sections (`SUMMARY`, `EXPERIENCE`, `SKILLS`, `EDUCATION`), preserving multi-role work histories without mid-sentence truncation.
 - 🧠 **Anthropic Contextual Retrieval Prepending**: Situates isolated resume chunks with 50–80 word document metadata banners before dense embedding and BM25 indexing, preserving pristine candidate text for recruiter UI display.
 - ⚖️ **Two-Stage Hybrid Retrieval & Cross-Encoder Reranking**: Combines dense vector cosine similarity with BM25 Okapi lexical scoring, followed by fine-grained `cross-encoder/ms-marco-MiniLM-L-6-v2` reranking with Sigmoid score calibration and Reciprocal Rank Fusion (RRF).

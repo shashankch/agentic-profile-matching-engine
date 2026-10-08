@@ -29,7 +29,7 @@ This document outlines high-level implementation milestones and strategic releas
 - **Concurrent Screening**: Parallel candidate screening with `ThreadPoolExecutor` and rate-limit semaphores ([ADR-014](adr/ADR-014-concurrency-controlled-async-screening.md)).
 
 ### Quality Gates & Engine Resilience (Phases 13–14 • v1.1.5) ✅
-- **Automated Quality Gates**: Strict `mypy` static typing, `pytest-cov` $\ge 75\%$ coverage gate, and `gitleaks`/`pip-audit` security scanning.
+- **Automated Quality Gates**: Strict `mypy` static typing, `pytest-cov` ≥ 75% coverage gate, and `gitleaks`/`pip-audit` security scanning.
 - **Deterministic Cache Correctness**: Global BM25 corpus fingerprinting and async subprocess lifecycle management.
 
 ### In-Memory Ingestion, Modern Routing & UI (Phase 15 • v1.2.0) ✅
@@ -54,7 +54,7 @@ This document outlines high-level implementation milestones and strategic releas
 ## 🚀 Future Milestones (Phases 18–20)
 
 ### Phase 18: Agent Topology, Calibrated Routing & Native Commands
-- **Calibrated Margin Routing**: Embedding margin scoring ($\Delta \ge 0.12$) to bypass LLM latency on high-confidence queries while escalating ambiguous queries to structured classifiers.
+- **Calibrated Margin Routing**: Embedding margin scoring (Δ ≥ 0.12) to bypass LLM latency on high-confidence queries while escalating ambiguous queries to structured classifiers.
 - **LangGraph Native Commands**: Refactor node transitions to native LangGraph `Command(goto=...)` primitives for dynamic graph traversal.
 - **Parallel Dual-Rubric Evaluation**: Parallel evaluation rubrics (Technical Architecture Competence vs HR Sourcing Fit), avoiding conversational latency bloat while delivering balanced committee scorecards.
 

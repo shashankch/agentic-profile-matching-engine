@@ -8,6 +8,7 @@ Recruitment and candidate sourcing platforms frequently encounter multi-lingual 
 
 ## Decision
 Extend the unified LLM provider factory in `src/agentic_profile_matching/config.py` with first-class support for **Sarvam AI** (`sarvam-105b`, `sarvam-2b`):
+
 - Wire Sarvam models via an OpenAI-compatible API bridge targeting `https://api.sarvam.ai/v1`.
 - Provide native UI dropdown selection and `.env` pre-population (`SARVAM_API_KEY`).
 - Integrate production-grade `invoke_structured` schema enforcement with multi-tier balanced-bracket JSON repair to ensure consistent structured parsing across all providers.

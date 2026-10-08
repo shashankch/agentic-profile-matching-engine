@@ -8,6 +8,7 @@ The agent workflow requires interaction with local filesystem utilities (file pa
 
 ## Decision
 Implement a **Dual-Mode Gateway Architecture** (`fs_client.py` and `mcp_client.py`) toggled dynamically via the `config.USE_MCP` boolean flag (`USE_MCP=True/False` in `.env` / `config.py`):
+
 1. **Local Direct Mode (`USE_MCP=False`)**: Directly executes local Python modules (`fs_tools.py`, `job_matcher.py`) in-process for lightweight local development and rapid testing.
 2. **MCP Protocol Mode (`USE_MCP=True`)**: Connects via `mcp.ClientSession` over `stdio` transport to standalone FastMCP protocol servers (`filesystem_mcp_server.py` and `search_mcp_server.py`), executing tools over standard JSON-RPC 2.0.
 

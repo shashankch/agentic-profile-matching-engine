@@ -8,25 +8,25 @@ This directory contains the individual Architecture Decision Records (ADRs) for 
 
 ## 📑 ADR Catalog & Executive Matrix
 
-| ADR | Title | Status | Release | Category | Standalone File |
-|:---|:---|:---|:---|:---|:---|
-| **ADR-001** | Model Context Protocol (MCP) Dual-Mode Gateway Architecture | Accepted | `v0.6.0` | Protocol & Tooling | [ADR-001](ADR-001-mcp-dual-mode-gateway-architecture.md) |
-| **ADR-002** | Using `TypedDict` for `AgentState` Over Pydantic `BaseModel` | Accepted | `v0.7.0` | State & Serialization | [ADR-002](ADR-002-using-typeddict-for-agentstate.md) |
-| **ADR-003** | `BaseVectorStore` Structural Protocol Over `abc.ABC` | Accepted | `v0.8.2` | Storage Abstraction | [ADR-003](ADR-003-basevectorstore-structural-protocol.md) |
-| **ADR-004** | BM25 Okapi Corpus Index Caching with Invalidation | Accepted | `v0.8.3` | Performance & Retrieval | [ADR-004](ADR-004-bm25-corpus-index-caching.md) |
-| **ADR-005** | Idempotent `upsert()` Ingestion with Section-Scoped Chunk Keys | Accepted | `v0.8.2` | Data Integrity | [ADR-005](ADR-005-idempotent-upsert-ingestion.md) |
-| **ADR-006** | Celery + Redis Task Queue for Asynchronous Heavy Operations | Accepted | `v0.8.6` | Distributed Workers | [ADR-006](ADR-006-celery-redis-task-queue.md) |
-| **ADR-007** | Structured JSON Logging & Pluggable Tracing Pipeline | Accepted | `v0.9.1` | Observability & APM | [ADR-007](ADR-007-structured-json-logging-and-tracing.md) |
-| **ADR-008** | Multi-Factor Hybrid Candidate Scoring & Grounded LLM Recommendation Hierarchy | Accepted | `v1.0.0` | AI Evaluation & Guardrails | [ADR-008](ADR-008-multi-factor-hybrid-scoring-and-hierarchy.md) |
-| **ADR-009** | LLM-Driven Intent Routing, Dynamic Anchors & Semantic Caching | Accepted | `v1.2.0` | Semantic Routing | [ADR-009](ADR-009-tiered-semantic-embedding-intent-routing.md) |
-| **ADR-010** | Multi-Provider LLM Abstraction with Sarvam AI Indic Model Integration | Accepted | `v1.1.0` | Multi-Provider & Indic Scale | [ADR-010](ADR-010-multi-provider-sarvam-indic-llm.md) |
-| **ADR-011** | Stateless Credential Isolation & Checkpoint Security | Implemented | `v1.2.0` | Security (CWE-312) | [ADR-011](ADR-011-stateless-credential-isolation.md) |
-| **ADR-012** | Functional State Immutability & LangGraph Node Invariance | Implemented | `v1.2.0` | State & Reliability | [ADR-012](ADR-012-functional-state-immutability.md) |
-| **ADR-013** | Dynamic Generative LLM Skill Expansion & Semantic Equivalence Matching | Implemented | `v1.2.0` | Domain Intelligence | [ADR-013](ADR-013-dynamic-skills-taxonomy-alias-normalization.md) |
-| **ADR-014** | Concurrency-Controlled Asynchronous Candidate Screening | Implemented | `v1.2.0` | Throughput & Latency | [ADR-014](ADR-014-concurrency-controlled-async-screening.md) |
-| **ADR-015** | Open/Closed LLM Provider Registry Pattern | Accepted | `v1.3.0` | Architecture & OCP | [ADR-015](ADR-015-open-closed-llm-provider-registry.md) |
-| **ADR-016** | Zero-Disk In-Memory Resume Ingestion | Implemented | `v1.2.0` | Ingestion & Privacy | [ADR-016](ADR-016-zero-disk-in-memory-resume-ingestion.md) |
-| **ADR-017** | Layout-Aware Section Parsing, Anthropic Contextual Retrieval & Two-Stage Reranking | Implemented | `v1.4.0` | Ingestion & Retrieval | [ADR-017](ADR-017-layout-parsing-contextual-retrieval-reranking.md) |
+| ADR | Title | Status | Release | Category |
+|:---|:---|:---|:---|:---|
+| [**ADR-001**](ADR-001-mcp-dual-mode-gateway-architecture.md) | Model Context Protocol (MCP) Dual-Mode Gateway Architecture | Accepted | `v0.6.0` | Protocol & Tooling |
+| [**ADR-002**](ADR-002-using-typeddict-for-agentstate.md) | Using `TypedDict` for `AgentState` Over Pydantic `BaseModel` | Accepted | `v0.7.0` | State & Serialization |
+| [**ADR-003**](ADR-003-basevectorstore-structural-protocol.md) | `BaseVectorStore` Structural Protocol Over `abc.ABC` | Accepted | `v0.8.2` | Storage Abstraction |
+| [**ADR-004**](ADR-004-bm25-corpus-index-caching.md) | BM25 Okapi Corpus Index Caching with Invalidation | Accepted | `v0.8.3` | Performance & Retrieval |
+| [**ADR-005**](ADR-005-idempotent-upsert-ingestion.md) | Idempotent `upsert()` Ingestion with Section-Scoped Chunk Keys | Accepted | `v0.8.2` | Data Integrity |
+| [**ADR-006**](ADR-006-celery-redis-task-queue.md) | Celery + Redis Task Queue for Asynchronous Heavy Operations | Accepted | `v0.8.6` | Distributed Workers |
+| [**ADR-007**](ADR-007-structured-json-logging-and-tracing.md) | Structured JSON Logging & Pluggable Tracing Pipeline | Accepted | `v0.9.1` | Observability & APM |
+| [**ADR-008**](ADR-008-multi-factor-hybrid-scoring-and-hierarchy.md) | Multi-Factor Hybrid Candidate Scoring & Grounded LLM Recommendation Hierarchy | Accepted | `v1.0.0` | AI Evaluation & Guardrails |
+| [**ADR-009**](ADR-009-tiered-semantic-embedding-intent-routing.md) | LLM-Driven Intent Routing, Dynamic Anchors & Semantic Caching | Accepted | `v1.2.0` | Semantic Routing |
+| [**ADR-010**](ADR-010-multi-provider-sarvam-indic-llm.md) | Multi-Provider LLM Abstraction with Sarvam AI Indic Model Integration | Accepted | `v1.1.0` | Multi-Provider & Indic Scale |
+| [**ADR-011**](ADR-011-stateless-credential-isolation.md) | Stateless Credential Isolation & Checkpoint Security | Implemented | `v1.2.0` | Security (CWE-312) |
+| [**ADR-012**](ADR-012-functional-state-immutability.md) | Functional State Immutability & LangGraph Node Invariance | Implemented | `v1.2.0` | State & Reliability |
+| [**ADR-013**](ADR-013-dynamic-skills-taxonomy-alias-normalization.md) | Dynamic Generative LLM Skill Expansion & Semantic Equivalence Matching | Implemented | `v1.2.0` | Domain Intelligence |
+| [**ADR-014**](ADR-014-concurrency-controlled-async-screening.md) | Concurrency-Controlled Asynchronous Candidate Screening | Implemented | `v1.2.0` | Throughput & Latency |
+| [**ADR-015**](ADR-015-open-closed-llm-provider-registry.md) | Open/Closed LLM Provider Registry Pattern | Accepted | `v1.3.0` | Architecture & OCP |
+| [**ADR-016**](ADR-016-zero-disk-in-memory-resume-ingestion.md) | Zero-Disk In-Memory Resume Ingestion | Implemented | `v1.2.0` | Ingestion & Privacy |
+| [**ADR-017**](ADR-017-layout-parsing-contextual-retrieval-reranking.md) | Layout-Aware Section Parsing, Anthropic Contextual Retrieval & Two-Stage Reranking | Implemented | `v1.4.0` | Ingestion & Retrieval |
 
 ---
 

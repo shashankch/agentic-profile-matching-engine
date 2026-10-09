@@ -251,5 +251,69 @@ def test_deep_screen_node_uses_in_memory_raw_text():
         mock_read_file.assert_not_called()
         assert res["current_round"] == 2
         assert res["shortlist"][0]["screening_status"] == "Screened"
-        # Reasoning was fallback due to unconfigured LLM, NOT unreadable file
         assert "unreadable" not in res["shortlist"][0]["screening_reasoning"].lower()
+
+
+def test_routing_command_mapping_interfaces():
+    from agentic_profile_matching.agent.nodes import RoutingCommand
+
+    cmd = RoutingCommand(
+        goto="extract_requirements",
+        update={"current_round": 1, "errors": [], "flag": True},
+    )
+    assert cmd.goto == "extract_requirements"
+    assert cmd["current_round"] == 1
+    assert "errors" in cmd
+    assert cmd.get("flag") is True
+    assert cmd.get("non_existent", "default") == "default"
+    assert set(cmd.keys()) == {"current_round", "errors", "flag"}
+    assert 1 in list(cmd.values())
+    assert ("flag", True) in list(cmd.items())
+
+
+def test_parse_input_node_routing_command_telemetry():
+    from agentic_profile_matching.agent.nodes import parse_input_node, RoutingCommand
+
+    state: AgentState = {
+        "messages": [HumanMessage(content="Search resumes for candidates with Python and Docker")],
+        "requirements": {},
+        "shortlist": [],
+    }
+
+    res = parse_input_node(state)
+    assert isinstance(res, RoutingCommand)
+    assert res.goto == "extract_requirements"
+    assert res["current_round"] == 1
+    telemetry = res["routing_decision"]
+    assert telemetry["target_node"] == "extract_requirements"
+    assert "margin" in telemetry
+    assert "top1_score" in telemetry
+    assert "is_confident" in telemetry
+
+
+def test_deep_screen_node_dual_rubric_fields():
+    from agentic_profile_matching.agent.nodes import deep_screen_node
+
+    state: AgentState = {
+        "shortlist": [
+            {
+                "candidate_id": "cand_dual",
+                "name": "Jane Dual",
+                "score": 90,
+                "raw_text": "Jane Dual. Senior Distributed Systems Architect with 10 years experience in Go and K8s.",
+            }
+        ],
+        "requirements": {
+            "title": "Principal Architect",
+            "must_have_skills": ["Go", "Kubernetes"],
+        },
+        "deep_screen_limit": 1,
+    }
+
+    with patch("agentic_profile_matching.agent.nodes._get_llm", return_value=None):
+        res = deep_screen_node(state)
+        cand = res["shortlist"][0]
+        assert cand.get("technical_score") is not None
+        assert cand.get("domain_fit_score") is not None
+        assert isinstance(cand.get("strengths"), list)
+        assert isinstance(cand.get("gaps"), list)

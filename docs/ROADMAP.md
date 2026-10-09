@@ -6,7 +6,7 @@ This document outlines high-level implementation milestones and strategic releas
 
 ---
 
-## 📍 Implementation Milestones (Phases 1–17)
+## 📍 Implementation Milestones (Phases 1–18)
 
 ### Foundational Pipeline & Core State Machine (Phases 1–7 • v0.1.0) ✅
 - **Agentic Core**: 9-node LangGraph `StateGraph` workflow with deterministic state transitions and `MemorySaver` checkpointing.
@@ -49,23 +49,40 @@ This document outlines high-level implementation milestones and strategic releas
 - **Two-Stage Hybrid Reranking**: Fine-grained Cross-Encoder joint reranking (`ms-marco-MiniLM-L-6-v2`) with Sigmoid calibration and Reciprocal Rank Fusion.
 - **Serverless Cloud Resilience**: Zero-disk pure NumPy `InMemoryVectorStore` fallback ensuring 100% crash-free ephemeral execution.
 
+### Calibrated Margin Routing, Native Commands & Dual-Rubric Subgraphs (Phase 18 • v1.5.0) ✅
+- **Calibrated Margin Routing**: Mathematical embedding margin scoring ($\Delta \ge 0.12$) routing confident queries in < 2ms at $0 LLM cost while escalating ambiguity to structured LLMs ([ADR-018](adr/ADR-018-calibrated-margin-routing-and-subgraphs.md)).
+- **LangGraph Native Commands**: Refactored workflow nodes to native LangGraph `Command(goto=..., update={...})` primitives with destination routing, eliminating conditional edge boilerplate.
+- **Parallel Dual-Rubric Structured Evaluation**: Concurrent structured scoring (Technical Architecture Competence 60% + Talent Sourcing Fit 40%) with deterministic mathematical aggregation, eliminating slow debate loops while delivering committee-grade scorecards.
+- **Modular Typed Subgraphs**: Pipeline decomposed into isolated, independently testable subgraphs (`JDAnalyzerSubgraph`, `TalentRetrievalSubgraph`, `DeepScreeningSubgraph`, `SynthesisSubgraph`).
+- **Diagram as Code Deliverable**: High-resolution publication-grade architecture diagram generated via `scripts/generate_diagrams.py` ([calibrated_margin_subgraphs.png](assets/diagrams/calibrated_margin_subgraphs.png)).
+
 ---
 
-## 🚀 Future Milestones (Phases 18–20)
+## 🚀 Future Milestones (Phases 19–22)
 
-### Phase 18: Agent Topology, Calibrated Routing & Native Commands
-- **Calibrated Margin Routing**: Embedding margin scoring (Δ ≥ 0.12) to bypass LLM latency on high-confidence queries while escalating ambiguous queries to structured classifiers.
-- **LangGraph Native Commands**: Refactor node transitions to native LangGraph `Command(goto=...)` primitives for dynamic graph traversal.
-- **Parallel Dual-Rubric Evaluation**: Parallel evaluation rubrics (Technical Architecture Competence vs HR Sourcing Fit), avoiding conversational latency bloat while delivering balanced committee scorecards.
+### Phase 19: Advanced RAG Architecture & Air-Gapped Local Inference (v1.6.0)
+- **HyDE (Hypothetical Document Embeddings)**: Query expansion generating synthetic candidate resumes to bridge recruiter search vocabulary gaps.
+- **Parent-Document Visual Chunking**: Fine-grained sub-chunk vector retrieval with full-section context expansion for dual-rubric screening.
+- **Air-Gapped Local Inference (Ollama / vLLM)**: Fully private, zero-API-cost on-premise model execution for GDPR and enterprise compliance.
+- **Pre-Retrieval Faceted Filtering**: Direct vector and lexical metadata constraints for years of experience and education criteria.
+- **Diagram as Code Deliverable**: Publication-grade architecture diagram in `scripts/generate_diagrams.py` (`docs/assets/diagrams/hyde_parent_doc_rag.png`).
 
-### Phase 19: Enterprise Multi-Tenancy & Zero-Trust PII Redaction
-- **Zero-Trust PII Tokenization Vault**: Pre-screening redaction replacing candidate personal identifiers with cryptographic tokens (`[CANDIDATE_A]`), enforcing objective blind hiring meritocracy.
-- **Tenant-Isolated Namespaces**: Hardware-partitioned collection namespaces across vector stores and session checkpoints.
-- **Adversarial Prompt Injection Sanitizer**: Ingestion heuristics intercepting indirect prompt injection payloads hidden inside uploaded resume files (OWASP LLM01).
-- **ATS Batch Staging Adapter**: Pre-signed S3/Blob storage adapter with automated lifecycle expiration for asynchronous multi-thousand resume batch uploads from enterprise ATS platforms (Workday, Greenhouse).
+### Phase 20: Resume Threat Security, Zero-Trust PII Redaction Vault & Multi-Tenancy (v1.7.0)
+- **Indirect Prompt Injection Defense (OWASP LLM01)**: Input sanitization heuristics, canary detection, and strict XML boundary tags neutralizing hidden resume injection payloads.
+- **Zero-Trust PII Tokenization Vault**: Pre-screening entity tokenization replacing personal candidate identifiers (`[CANDIDATE_A]`) for EEOC blind hiring meritocracy.
+- **Reversible Recruiter Vault**: AES-256 encrypted candidate identity mapping revealed only upon authorized recruiter outreach with immutable audit logging.
+- **Hardware-Partitioned Multi-Tenancy**: Isolated collection namespaces across vector stores (`tenant_{org_id}_resumes`) and session checkpoints.
+- **Diagram as Code Deliverable**: Publication-grade architecture diagram in `scripts/generate_diagrams.py` (`docs/assets/diagrams/zero_trust_pii_vault_security.png`).
 
-### Phase 20: Unit Economics, Semantic Caching & Continuous Evals
-- **Pool-Aware Semantic Cache**: Sub-10ms response cache for semantically equivalent recruiter queries, guarded by pool-version hashes to prevent stale candidate rankings.
-- **Bias, Fairness & Inclusivity Auditing**: Automated inclusivity scanning for job descriptions and demographic score parity auditing for global regulatory compliance.
-- **Granular Cost & Token Budgeting**: Real-time per-query and per-tenant cost accounting and token quota enforcement.
-- **Automated Continuous Evaluation Gate**: Automated RAG Triad benchmarks (Context Precision, Recall@K, Faithfulness) blocking pull requests on score regression.
+### Phase 21: Unit Economics, Semantic Caching & Budget Circuit Breakers (v1.8.0)
+- **Pool-Aware Semantic Evaluation Cache**: Sub-5ms response caching for semantically equivalent recruiter queries, guarded by pool-version hashes to prevent stale candidate rankings.
+- **Granular Cost & Token Budgeting**: Predictive `tiktoken` calculation, real-time per-query and per-tenant cost accounting, daily spend caps, and runaway loop circuit breakers.
+- **Job Description Inclusivity Scanner**: Automated open-source linguistic analysis flagging exclusionary or demographic-biased wording and generating auditable competency-grounded rationale trails.
+- **Diagram as Code Deliverable**: Publication-grade architecture diagram in `scripts/generate_diagrams.py` (`docs/assets/diagrams/semantic_cache_token_budgeting.png`).
+
+### Phase 22: Production Infrastructure, Containerization & Continuous Evals (v2.0.0)
+- **Multi-Stage Hardened Production Dockerfile**: Minimal non-root container image (<250MB) isolating build dependencies for ASGI sidecar and workers.
+- **Docker Compose Multi-Service Topology**: Single-command orchestration for FastAPI sidecar, Streamlit UI, Celery worker, Redis 7, vector services, and self-hosted Langfuse.
+- **Continuous Ragas & DeepEval CI/CD Quality Gates**: Automated RAG Triad benchmarks (Context Precision $\ge 0.88$, Recall@K, Faithfulness $\ge 0.90$) blocking pull requests on score regression.
+- **Deep Health Probes & Rate Limiting**: `/healthz` and `/readyz` probing database, Redis, and workers with `slowapi` rate-limiting shield.
+- **Diagram as Code Deliverable**: Publication-grade architecture diagram in `scripts/generate_diagrams.py` (`docs/assets/diagrams/turnkey_container_ragas_gates.png`).

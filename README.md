@@ -7,9 +7,9 @@
   <a href="https://shashankch.github.io/yojaka-ai-profile-matching-engine/"><img src="https://img.shields.io/badge/Docs-MkDocs_Material-blueviolet.svg" alt="Documentation Site"></a>
   <a href="https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/deploy-docs.yml"><img src="https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/deploy-docs.yml/badge.svg" alt="Documentation Deploy CI"></a>
   <a href="https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/ci.yml"><img src="https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/ci.yml/badge.svg" alt="Python CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-v1.4.0-blue.svg" alt="Version: v1.4.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-v1.5.0-blue.svg" alt="Version: v1.5.0"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.14-blue.svg" alt="Python Version"></a>
-  <a href="docs/adr/README.md"><img src="https://img.shields.io/badge/ADRs-17%20Accepted-teal.svg" alt="Architecture Decision Records"></a>
+  <a href="docs/adr/README.md"><img src="https://img.shields.io/badge/ADRs-18%20Accepted-teal.svg" alt="Architecture Decision Records"></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Linter: Ruff"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License: Apache 2.0"></a>
   <a href="docs/CONVENTIONS.md"><img src="https://img.shields.io/badge/Conventions-Architectural-purple.svg" alt="Conventions"></a>
@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  Production-Grade AI Recruiter &amp; Profile Matching Engine built with <b>LangGraph</b>, <b>Layout-Aware Section Parsing</b>, <b>Anthropic Contextual Retrieval</b>, <b>Two-Stage Cross-Encoder Reranking</b>, <b>Hybrid RAG</b>, <b>Dynamic Semantic Skill Expansion</b>, <b>Zero-Disk In-Memory Upload</b>, and <b>Model Context Protocol (MCP)</b>.
+  Production-Grade AI Recruiter &amp; Profile Matching Engine built with <b>LangGraph 1.x Native Commands</b>, <b>Calibrated Margin Routing</b>, <b>Parallel Dual-Rubric Subgraphs</b>, <b>Layout-Aware Section Parsing</b>, <b>Anthropic Contextual Retrieval</b>, <b>Two-Stage Cross-Encoder Reranking</b>, <b>Hybrid RAG</b>, <b>Dynamic Semantic Skill Expansion</b>, <b>Zero-Disk In-Memory Upload</b>, and <b>Model Context Protocol (MCP)</b>.
 </p>
 
 </div>
@@ -38,7 +38,8 @@
 - 📑 **Layout-Aware Section Document Parsing**: Parses PDF visual layout blocks (`pymupdf`), DOCX paragraph runs, and text delimiters into canonical sections (`SUMMARY`, `EXPERIENCE`, `SKILLS`, `EDUCATION`), preserving multi-role work histories without mid-sentence truncation.
 - 🧠 **Anthropic Contextual Retrieval Prepending**: Situates isolated resume chunks with 50–80 word document metadata banners before dense embedding and BM25 indexing, preserving pristine candidate text for recruiter UI display.
 - ⚖️ **Two-Stage Hybrid Retrieval & Cross-Encoder Reranking**: Combines dense vector cosine similarity with BM25 Okapi lexical scoring, followed by fine-grained `cross-encoder/ms-marco-MiniLM-L-6-v2` reranking with Sigmoid score calibration and Reciprocal Rank Fusion (RRF).
-- 🔀 **LLM-Driven Intent Routing**: Zero-shot structured intent routing with dynamic exemplar synthesis and an in-memory LRU query routing cache for sub-millisecond repeated queries.
+- 🔀 **Calibrated Margin Routing & LangGraph Native Commands**: Mathematical embedding margin gating ($\Delta = \text{Top1} - \text{Top2} \ge 0.12$) routing confident queries in < 2ms at $0 LLM cost while escalating ambiguity to structured SLMs, coupled with native LangGraph 1.x `Command` traversal ([ADR-018](docs/adr/ADR-018-calibrated-margin-routing-and-subgraphs.md)).
+- 📊 **Parallel Dual-Rubric Structured Evaluation & Subgraphs**: Concurrent candidate screening evaluating Technical Architecture Competency (60%) and Talent Sourcing Fit (40%) with deterministic mathematical aggregation in ~1.2s, orchestrated across isolated typed subgraphs (`JDAnalyzer`, `TalentRetrieval`, `DeepScreening`, `Synthesis`).
 - 🔒 **Zero-Disk In-Memory Upload & Ephemeral PII Isolation**: Ingests `.pdf`, `.docx`, and `.txt` files directly in memory via `io.BytesIO` layered through `CompositeVectorStore` with session-scoped in-memory vector stores ([ADR-016](docs/adr/ADR-016-zero-disk-in-memory-resume-ingestion.md)).
 - 🖥️ **Dual Presentation Layer**: Clean `<75-LOC` Streamlit conductor (`app.py`) featuring `st.write_stream` typewriter streaming and live tool execution tracing, coupled with a headless FastAPI sidecar (`api/`) exposing REST and Server-Sent Events (SSE) endpoints.
 - 🔌 **Model Context Protocol (MCP) Dual Gateway**: Hot-swap between in-process tool execution and FastMCP JSON-RPC `stdio` servers ([ADR-001](docs/adr/ADR-001-mcp-dual-mode-gateway-architecture.md)).
@@ -157,7 +158,7 @@ docker compose logs -f
 ## 🧪 Testing & Automated Quality Gates
 
 ```bash
-# Run complete unit and integration test suite (116 tests)
+# Run complete unit and integration test suite (127 tests)
 pytest tests/ -v
 
 # Run RAG Evaluation Benchmark Suite (Recall@K, MRR & Faithfulness)
@@ -174,8 +175,8 @@ ruff format --check src/ tests/
 
 - 🌐 **[Online Documentation Site (MkDocs Material)](https://shashankch.github.io/yojaka-ai-profile-matching-engine/)**: Interactive documentation hosted on GitHub Pages with instant full-text search, light/dark themes, interactive C4 architecture diagrams, and ADR catalog.
 - 🏛️ **[System Architecture & Technical Specifications](docs/architecture.md)**: Deep dive on dataflow sequences, mathematical formulations, state transitions, and distributed scaling.
-- 📐 **[Architecture Decision Records (ADRs 001–017)](docs/adr/README.md)**: Complete catalog of formal design decisions, evaluated alternatives, and trade-offs.
-- 🗺️ **[Implementation Roadmap](docs/ROADMAP.md)**: Phased milestones (Completed Phases 1–17 and Future Backlog Phases 18–20).
+- 📐 **[Architecture Decision Records (ADRs 001–018)](docs/adr/README.md)**: Complete catalog of formal design decisions, evaluated alternatives, and trade-offs.
+- 🗺️ **[Implementation Roadmap](docs/ROADMAP.md)**: Phased milestones (Completed Phases 1–18 and Future Milestones Phases 19–22).
 - 🛡️ **[Engineering Conventions](docs/CONVENTIONS.md)**: Architectural patterns, Pydantic V2 schemas, error boundaries, and type safety rules.
 - 🤝 **[Contributing Guidelines](CONTRIBUTING.md)**: Local developer setup, branching conventions, and quality gates.
 - 📝 **[Changelog](CHANGELOG.md)**: Semantic versioning release history.
@@ -183,11 +184,9 @@ ruff format --check src/ tests/
 
 ---
 
-## ⚖️ License & Trademarks
+## ⚖️ License
 
 This project is licensed under the Apache License 2.0 — see the [LICENSE](LICENSE) file for details.
-
-> ℹ️ **Trademarks & Brand Logos Notice**: All product names, logos, brands, trademarks, and registered trademarks are property of their respective owners. All company, product, and service names used in this project and documentation are for identification purposes only. Use of these names, logos, and brands does not imply endorsement.
 
 ---
 

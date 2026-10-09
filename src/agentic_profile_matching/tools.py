@@ -61,6 +61,48 @@ class DeepScreenOutput(BaseModel):
     )
 
 
+class TechnicalRubricOutput(BaseModel):
+    technical_score: float = Field(
+        default=70.0,
+        ge=0.0,
+        le=100.0,
+        description="Score from 0 to 100 on technical architecture competence, tooling, and systems depth.",
+    )
+    technical_strengths: List[str] = Field(
+        default_factory=list,
+        description="2-3 key technical and architectural strengths demonstrated.",
+    )
+    technical_gaps: List[str] = Field(
+        default_factory=list,
+        description="1-2 technical architecture gaps or missing technical capabilities.",
+    )
+    architecture_notes: str = Field(
+        default="",
+        description="Short evaluation notes on architectural depth and systems design.",
+    )
+
+
+class DomainFitRubricOutput(BaseModel):
+    domain_fit_score: float = Field(
+        default=70.0,
+        ge=0.0,
+        le=100.0,
+        description="Score from 0 to 100 on talent sourcing fit, tenure stability, and domain relevance.",
+    )
+    sourcing_strengths: List[str] = Field(
+        default_factory=list,
+        description="2-3 key trajectory, domain, and experience strengths.",
+    )
+    sourcing_gaps: List[str] = Field(
+        default_factory=list,
+        description="1-2 trajectory or domain alignment concerns or gaps.",
+    )
+    trajectory_notes: str = Field(
+        default="",
+        description="Short evaluation notes on career progression and tenure stability.",
+    )
+
+
 class InterviewQuestionsOutput(BaseModel):
     questions: List[str] = Field(default_factory=list, description="3 to 5 targeted technical screening questions")
 

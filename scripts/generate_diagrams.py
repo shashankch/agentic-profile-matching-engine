@@ -857,6 +857,59 @@ def generate_layout_parsing_two_stage_rerank():
         index >> Edge(label="Candidate Chunks", color="#059669") >> stage1
 
 
+def generate_calibrated_margin_subgraphs():
+    """Generates Calibrated Margin Routing & Dual-Rubric Subgraphs architecture diagram (Phase 18)."""
+    output_path = OUTPUT_DIR / "calibrated_margin_subgraphs"
+    with Diagram(
+        "Calibrated Margin Routing, Native Commands & Dual-Rubric Subgraphs (Phase 18 / ADR-018)",
+        filename=str(output_path),
+        show=False,
+        direction="LR",
+        graph_attr={**BASE_GRAPH_ATTR, "ranksep": "1.3", "nodesep": "0.8"},
+        node_attr=BASE_NODE_ATTR,
+        edge_attr=BASE_EDGE_ATTR,
+    ):
+        with Cluster(
+            "1. Calibrated Margin Ingress & Routing",
+            graph_attr=cluster_attr("#f8fafc", "#cbd5e1"),
+        ):
+            user = User("Recruiter Ingress\n(Raw Prompt / JD)")
+            router = Python("Margin Router\n(Top1 - Top2 >= 0.12)")
+            fast_path = Custom("Fast-Path Command\n(Direct <2ms · $0 Cost)", ICON_LANGGRAPH)
+            llm_gate = Custom("Structured LLM Gate\n(Ambiguity Fallback)", ICON_GROQ)
+            user >> router
+            router >> Edge(label="Margin >= 0.12", color="#059669") >> fast_path
+            router >> Edge(label="Margin < 0.12", color="#d97706") >> llm_gate
+
+        with Cluster(
+            "2. Modular Subgraphs Pipeline (Dual-Rubric Screening)",
+            graph_attr=cluster_attr("#eff6ff", "#93c5fd"),
+        ):
+            jd_subgraph = Textract("JD Analyzer Subgraph\n(Requirements & Skills)")
+            retrieval = Kendra("Talent Retrieval Subgraph\n(Hybrid + Cross-Encoder)")
+            rubric_a = Custom("Rubric A: Technical (60%)\nArchitecture & Systems", ICON_GROQ)
+            rubric_b = Custom("Rubric B: Domain (40%)\nTrajectory & Culture", ICON_GEMINI)
+            aggregator = Python("Deterministic Aggregator\n(0.6A + 0.4B)")
+
+            fast_path >> Edge(color="#2563eb") >> jd_subgraph
+            llm_gate >> Edge(color="#2563eb") >> jd_subgraph
+            jd_subgraph >> Edge(label="Extracted Schema", color="#2563eb") >> retrieval
+            retrieval >> Edge(label="Candidate Chunks", color="#2563eb") >> rubric_a
+            retrieval >> Edge(label="Candidate Chunks", color="#2563eb") >> rubric_b
+            rubric_a >> Edge(color="#7c3aed") >> aggregator
+            rubric_b >> Edge(color="#7c3aed") >> aggregator
+
+        with Cluster(
+            "3. Synthesis & Recruiter Presentation",
+            graph_attr=cluster_attr("#f0fdf4", "#86efac"),
+        ):
+            synthesis = Custom("Synthesis Subgraph\n(QGen, Safety & Matrix)", ICON_OPENAI)
+            out = Custom("Recruiter Dashboard\n(Streamlit & FastAPI)", ICON_STREAMLIT)
+
+            aggregator >> Edge(label="Composite Shortlist", color="#059669") >> synthesis
+            synthesis >> Edge(label="Final Report & Scores", color="#059669") >> out
+
+
 def preserve_state_machine_assets():
     """Copies the canonical state_machine assets without regenerating them."""
     canonical_png = DOCS_DIR / "state_machine.png"
@@ -866,7 +919,7 @@ def preserve_state_machine_assets():
 
 
 def main():
-    """Generates all 16 architecture and dataflow diagrams."""
+    """Generates all 17 architecture and dataflow diagrams."""
     print("🎨 Generating Yojaka AI Architecture & Dataflow Diagrams with Diagrams (diagrams as code)...")
 
     diagram_generators = [
@@ -886,6 +939,7 @@ def main():
         ("Enterprise Security Guardrails", generate_enterprise_security_guardrails),
         ("Dual-Surface UI & API", generate_dual_surface_ui_api),
         ("Layout Parsing & Two-Stage Rerank", generate_layout_parsing_two_stage_rerank),
+        ("Calibrated Margin & Subgraphs", generate_calibrated_margin_subgraphs),
     ]
 
     for name, gen_fn in diagram_generators:

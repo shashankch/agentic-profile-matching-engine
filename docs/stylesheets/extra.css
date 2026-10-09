@@ -196,7 +196,8 @@
   border: 1px solid var(--md-default-fg-color--lightest);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-  max-width: 100%;
+  max-width: 96%;
+  width: auto;
   height: auto;
   display: block;
   margin: 1.5rem auto;

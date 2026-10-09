@@ -1,37 +1,37 @@
 # 💼 Yojaka AI (Agentic Profile Matching Engine)
 
-<div class="hero-badges" markdown="1">
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://yojaka-ai-job-profile-matching-engine.streamlit.app/)
-[![Documentation Site](https://img.shields.io/badge/Docs-MkDocs_Material-blueviolet.svg)](https://shashankch.github.io/yojaka-ai-profile-matching-engine/)
-[![Documentation Deploy CI](https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/deploy-docs.yml/badge.svg)](https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/deploy-docs.yml)
-[![Python CI](https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/ci.yml)
-[![Version: v1.4.0](https://img.shields.io/badge/version-v1.4.0-blue.svg)](CHANGELOG.md)
-[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.14-blue.svg)](https://www.python.org/)
-[![Architecture Decision Records](https://img.shields.io/badge/ADRs-17%20Accepted-teal.svg)](adr/index.md)
-[![Linter: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE.md)
-[![Conventions](https://img.shields.io/badge/Conventions-Architectural-purple.svg)](CONVENTIONS.md)
-[![Contributing](https://img.shields.io/badge/Contributing-Welcome-green.svg)](CONTRIBUTING.md)
-</div>
+<p class="hero-badges" align="center">
+  <a href="https://yojaka-ai-job-profile-matching-engine.streamlit.app/"><img src="https://static.streamlit.io/badges/streamlit_badge_black_white.svg" alt="Streamlit App"></a>
+  <a href="https://shashankch.github.io/yojaka-ai-profile-matching-engine/"><img src="https://img.shields.io/badge/Docs-MkDocs_Material-blueviolet.svg" alt="Documentation Site"></a>
+  <a href="https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/deploy-docs.yml"><img src="https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/deploy-docs.yml/badge.svg" alt="Documentation Deploy CI"></a>
+  <a href="https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/ci.yml"><img src="https://github.com/shashankch/yojaka-ai-profile-matching-engine/actions/workflows/ci.yml/badge.svg" alt="Python CI"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-v1.5.0-blue.svg" alt="Version: v1.5.0"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.14-blue.svg" alt="Python Version"></a>
+  <a href="adr/index.md"><img src="https://img.shields.io/badge/ADRs-18%20Accepted-teal.svg" alt="Architecture Decision Records"></a>
+  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Linter: Ruff"></a>
+  <a href="https://github.com/shashankch/yojaka-ai-profile-matching-engine/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License: Apache 2.0"></a>
+  <a href="CONVENTIONS.md"><img src="https://img.shields.io/badge/Conventions-Architectural-purple.svg" alt="Conventions"></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/Contributing-Welcome-green.svg" alt="Contributing"></a>
+</p>
 
 <p class="hero-subtitle">
-Production-Grade AI Recruiter &amp; Profile Matching Engine built with <strong>LangGraph</strong>, <strong>Layout-Aware Section Parsing</strong>, <strong>Anthropic Contextual Retrieval</strong>, <strong>Two-Stage Cross-Encoder Reranking</strong>, <strong>Hybrid RAG</strong>, <strong>Dynamic Skill Expansion</strong>, <strong>Zero-Disk In-Memory Upload</strong>, and <strong>Model Context Protocol (MCP)</strong>.
+Production-Grade AI Recruiter &amp; Profile Matching Engine built with <strong>LangGraph 1.x Native Commands</strong>, <strong>Calibrated Margin Routing</strong>, <strong>Parallel Dual-Rubric Subgraphs</strong>, <strong>Layout-Aware Section Parsing</strong>, <strong>Anthropic Contextual Retrieval</strong>, <strong>Two-Stage Cross-Encoder Reranking</strong>, <strong>Hybrid RAG</strong>, <strong>Dynamic Skill Expansion</strong>, <strong>Zero-Disk In-Memory Upload</strong>, and <strong>Model Context Protocol (MCP)</strong>.
 </p>
 
 !!! quote "💡 What is Yojaka (योजक)?"
     In classical Sanskrit, **योजक (Yojaka)** derives from the root *युज् (yuj)* — meaning *to connect, unite, align, or orchestrate*. Rather than treating candidate vetting as a cold keyword gatekeeper, **Yojaka AI** operates as an intelligent orchestrator: parsing unstructured human potential, dynamically expanding semantic equivalences, and cascading through structured reasoning to match talent with purpose.
 
-![Yojaka AI End-to-End Walkthrough Demo](assets/yojaka_demo.gif){ .diagram-image width="94%" }
+![Yojaka AI End-to-End Walkthrough Demo](assets/yojaka_demo.gif)
 
 ---
 
 ## ⚡ Core Highlights & Capabilities
 
 - 🎯 **3-Stage Cascading Funnel (`O(N) → O(K)`)**: Coarse hybrid vector/lexical retrieval (Stage 1) → structured LLM profile audit (Stage 2) → grounded decision synthesis with tailored interview questions (Stage 3). Eliminates rate-limit bottlenecks and token exhaustion.
+- 🔀 **Calibrated Margin Routing & Subgraphs (ADR-018)**: Mathematical embedding margin gating ($\Delta = \text{Top1} - \text{Top2} \ge 0.12$) dispatching confident queries in <2ms at $0 token cost, native LangGraph `Command(goto=...)` destination routing, concurrent dual-rubric candidate evaluation, and isolated typed subgraphs.
 - 📑 **Layout-Aware Section Document Parsing**: Parses PDF visual layout blocks (`pymupdf`), DOCX paragraph runs, and text delimiters into canonical sections (`SUMMARY`, `EXPERIENCE`, `SKILLS`, `EDUCATION`), preserving multi-role work histories without mid-sentence truncation.
 - 🧠 **Anthropic Contextual Retrieval Prepending**: Situates isolated resume chunks with 50–80 word document metadata banners before dense embedding and BM25 indexing, preserving pristine candidate text for recruiter UI display.
 - ⚖️ **Two-Stage Hybrid Retrieval & Cross-Encoder Reranking**: Combines dense vector cosine similarity with BM25 Okapi lexical scoring, followed by fine-grained `cross-encoder/ms-marco-MiniLM-L-6-v2` reranking with Sigmoid score calibration and Reciprocal Rank Fusion (RRF).
-- 🔀 **LLM-Driven Intent Routing**: Zero-shot structured intent routing with dynamic exemplar synthesis and an in-memory LRU query routing cache for sub-millisecond repeated queries.
 - 🔒 **Zero-Disk In-Memory Upload & Ephemeral PII Isolation**: Ingests `.pdf`, `.docx`, and `.txt` files directly in memory via `io.BytesIO` layered through `CompositeVectorStore` with session-scoped in-memory vector stores ([ADR-016](adr/ADR-016-zero-disk-in-memory-resume-ingestion.md)).
 - 🖥️ **Dual Presentation Layer**: Clean `<75-LOC` Streamlit conductor (`app.py`) featuring `st.write_stream` typewriter streaming and live tool execution tracing, coupled with a headless FastAPI sidecar (`api/`) exposing REST and Server-Sent Events (SSE) endpoints.
 - 🔌 **Model Context Protocol (MCP) Dual Gateway**: Hot-swap between in-process tool execution and FastMCP JSON-RPC `stdio` servers ([ADR-001](adr/ADR-001-mcp-dual-mode-gateway-architecture.md)).
@@ -40,7 +40,7 @@ Production-Grade AI Recruiter &amp; Profile Matching Engine built with <strong>L
 
 ## 🏛️ System Architecture
 
-![Yojaka AI System Architecture Overview](assets/diagrams/system_architecture.png){ .diagram-image width="96%" }
+![Yojaka AI System Architecture Overview](assets/diagrams/system_architecture.png)
 
 > 📚 **Documentation & Deep Dive**: For comprehensive interactive dataflow diagrams, mathematical scoring formulations, and security specifications, explore [**Technical Architecture**](architecture.md) or visit the [**Online Documentation Site**](https://shashankch.github.io/yojaka-ai-profile-matching-engine/).
 
@@ -50,7 +50,7 @@ Production-Grade AI Recruiter &amp; Profile Matching Engine built with <strong>L
 
 Candidate evaluation cascades across 3 tiers to optimize LLM token consumption `O(N) → O(K)`:
 
-![3-Stage Cascading Screening Funnel](assets/diagrams/cascading_screening_funnel.png){ .diagram-image width="96%" }
+![3-Stage Cascading Screening Funnel](assets/diagrams/cascading_screening_funnel.png)
 
 ---
 
@@ -146,7 +146,7 @@ docker compose logs -f
 ## 🧪 Testing & Automated Quality Gates
 
 ```bash
-# Run complete unit and integration test suite (116 tests)
+# Run complete unit and integration test suite (127 tests)
 pytest tests/ -v
 
 # Run RAG Evaluation Benchmark Suite (Recall@K, MRR & Faithfulness)
@@ -163,8 +163,8 @@ ruff format --check src/ tests/
 
 - 🌐 **[Online Documentation Site (MkDocs Material)](https://shashankch.github.io/yojaka-ai-profile-matching-engine/)**: Full interactive documentation with instant search, dark mode, high-res C4 diagrams, and ADR catalog hosted on GitHub Pages.
 - 🏛️ **[System Architecture & Technical Specifications](architecture.md)**: Deep dive on dataflow sequences, mathematical formulations, state transitions, and distributed scaling.
-- 📐 **[Architecture Decision Records (ADRs 001–017)](adr/index.md)**: Complete catalog of formal design decisions, evaluated alternatives, and trade-offs.
-- 🗺️ **[Implementation Roadmap](ROADMAP.md)**: Phased milestones (Completed Phases 1–17 and Future Backlog Phases 18–20).
+- 📐 **[Architecture Decision Records (ADRs 001–018)](adr/index.md)**: Complete catalog of formal design decisions, evaluated alternatives, and trade-offs.
+- 🗺️ **[Implementation Roadmap](ROADMAP.md)**: Phased milestones (Completed Phases 1–18 and Future Milestones Phases 19–22).
 - 🛡️ **[Engineering Conventions](CONVENTIONS.md)**: Architectural patterns, Pydantic V2 schemas, error boundaries, and type safety rules.
 - 🤝 **[Contributing Guidelines](CONTRIBUTING.md)**: Local developer setup, branching conventions, and quality gates.
 - 📝 **[Changelog](CHANGELOG.md)**: Semantic versioning release history.

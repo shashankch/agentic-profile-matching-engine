@@ -1,4 +1,4 @@
-from typing import TypedDict, List, Dict, Optional
+from typing import TypedDict, List, Dict, Optional, Any
 from langchain_core.messages import BaseMessage
 
 
@@ -27,6 +27,15 @@ class CandidateMatch(TypedDict, total=False):
     screening_status: str
     screening_reasoning: str
     interview_questions: List[str]
+    # Phase 18: Parallel Dual-Rubric Structured Evaluation fields
+    technical_score: Optional[float]
+    domain_fit_score: Optional[float]
+    technical_strengths: Optional[List[str]]
+    technical_gaps: Optional[List[str]]
+    sourcing_strengths: Optional[List[str]]
+    sourcing_gaps: Optional[List[str]]
+    architecture_notes: Optional[str]
+    trajectory_notes: Optional[str]
 
 
 class AgentState(TypedDict, total=False):
@@ -43,3 +52,5 @@ class AgentState(TypedDict, total=False):
     feedback_pending: bool
     user_feedback: str
     errors: List[str]
+    # Phase 18: Calibrated Margin Routing Telemetry
+    routing_decision: Optional[Dict[str, Any]]

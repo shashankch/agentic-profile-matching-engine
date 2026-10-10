@@ -8,6 +8,7 @@ from typing import Dict, Any, Optional, Tuple
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
+from langgraph.types import Command
 
 from agentic_profile_matching.mcp_client import mcp_client
 
@@ -15,6 +16,7 @@ from agentic_profile_matching.observability import get_logger, trace_node
 from agentic_profile_matching import config as app_config
 from agentic_profile_matching.fs_client import read_file
 from agentic_profile_matching.job_matcher import JobMatcher
+from agentic_profile_matching.agent.routers import route_input, calculate_intent_margin
 from agentic_profile_matching.tools import (
     extract_requirements,
     compare_candidates,
@@ -23,6 +25,8 @@ from agentic_profile_matching.tools import (
     invoke_structured,
     DeepScreenOutput,
     JobRequirementsOutput,
+    TechnicalRubricOutput,
+    DomainFitRubricOutput,
 )
 from agentic_profile_matching.agent.state import AgentState
 from agentic_profile_matching.agent.prompts import (
@@ -31,10 +35,40 @@ from agentic_profile_matching.agent.prompts import (
     RANKING_EXPLANATION_USER_PROMPT,
     ADJUST_REQUIREMENTS_SYSTEM_PROMPT,
     CONVERSATIONAL_QUERY_SYSTEM_PROMPT,
+    TECHNICAL_RUBRIC_SYSTEM_PROMPT,
+    DOMAIN_FIT_RUBRIC_SYSTEM_PROMPT,
 )
 from agentic_profile_matching.stores import BaseVectorStore
 
 logger = get_logger("agentic_profile_matching.agent.nodes")
+
+
+class RoutingCommand(Command):
+    """
+    LangGraph 1.x native Command that also provides dict-like mapping
+    interfaces for seamless backward compatibility with testing harnesses.
+    """
+
+    def __init__(self, goto: str, update: Dict[str, Any]):
+        super().__init__(goto=goto, update=update)
+
+    def __getitem__(self, key: str) -> Any:
+        return self.update[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.update
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.update.get(key, default)
+
+    def keys(self):
+        return self.update.keys()
+
+    def values(self):
+        return self.update.values()
+
+    def items(self):
+        return self.update.items()
 
 
 def _get_llm(state: AgentState, config: Optional[RunnableConfig] = None):
@@ -108,9 +142,9 @@ def _get_store(config: Optional[RunnableConfig] = None) -> Optional[BaseVectorSt
 
 
 @trace_node("parse_input")
-def parse_input_node(state: AgentState, config: Optional[RunnableConfig] = None) -> Dict[str, Any]:
+def parse_input_node(state: AgentState, config: Optional[RunnableConfig] = None) -> Any:
     """
-    Inspects and prepares state metadata prior to conditional graph routing.
+    Inspects input state and resolves native LangGraph Command routing with margin telemetry.
     """
     errors = state.get("errors")
     if errors is None:
@@ -119,11 +153,30 @@ def parse_input_node(state: AgentState, config: Optional[RunnableConfig] = None)
     # Capture the previous shortlist before updating
     prev_shortlist = state.get("shortlist", [])
 
-    return {
-        "current_round": 1,
-        "previous_shortlist": prev_shortlist,
-        "errors": errors,
+    # Route input using calibrated margin router
+    target_route = route_input(state)
+
+    messages = state.get("messages", [])
+    last_msg = messages[-1].content if messages else ""
+    margin_res = calculate_intent_margin(last_msg, state) if last_msg else None
+
+    routing_telemetry = {
+        "target_node": target_route,
+        "margin": float(margin_res.margin) if margin_res else 0.0,
+        "top1_score": float(margin_res.top1_score) if margin_res else 0.0,
+        "top2_score": float(margin_res.top2_score) if margin_res else 0.0,
+        "is_confident": bool(margin_res.is_confident) if margin_res else True,
     }
+
+    return RoutingCommand(
+        goto=target_route,
+        update={
+            "current_round": 1,
+            "previous_shortlist": prev_shortlist,
+            "errors": errors,
+            "routing_decision": routing_telemetry,
+        },
+    )
 
 
 @trace_node("extract_requirements")
@@ -357,6 +410,8 @@ def deep_screen_node(state: AgentState, config: Optional[RunnableConfig] = None)
             resume_text = resume_text[: app_config.RESUME_TRUNCATION_LIMIT] + "... [truncated]"
 
         if llm is None:
+            c["technical_score"] = 70.0
+            c["domain_fit_score"] = 70.0
             c["strengths"] = ["Semantic match based on vector DB indexing"]
             c["gaps"] = ["Skipped deep screening audit due to missing LLM configuration"]
             c["improvement_suggestions"] = "Configure LLM provider with a valid API key."
@@ -370,17 +425,110 @@ Job Requirements: {requirements}
 Candidate Resume Text:
 {resume_text}"""
 
-        def _call_deep_screen():
-            messages = [
-                SystemMessage(content=DEEP_SCREEN_SYSTEM_PROMPT),
+        def _call_dual_rubrics() -> Dict[str, Any]:
+            tech_messages = [
+                SystemMessage(content=TECHNICAL_RUBRIC_SYSTEM_PROMPT),
                 HumanMessage(content=prompt_content),
             ]
-            return invoke_structured(llm, messages, DeepScreenOutput)
+            dom_messages = [
+                SystemMessage(content=DOMAIN_FIT_RUBRIC_SYSTEM_PROMPT),
+                HumanMessage(content=prompt_content),
+            ]
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as rubric_exec:
+                tech_fut = rubric_exec.submit(invoke_structured, llm, tech_messages, TechnicalRubricOutput)
+                dom_fut = rubric_exec.submit(invoke_structured, llm, dom_messages, DomainFitRubricOutput)
+                tech_res = tech_fut.result()
+                dom_res = dom_fut.result()
+
+            tech_score = float(tech_res.get("technical_score", 70.0))
+            dom_score = float(dom_res.get("domain_fit_score", 70.0))
+            combined_score = round(0.60 * tech_score + 0.40 * dom_score, 1)
+
+            t_strengths = tech_res.get("technical_strengths", [])
+            s_strengths = dom_res.get("sourcing_strengths", [])
+            t_gaps = tech_res.get("technical_gaps", [])
+            s_gaps = dom_res.get("sourcing_gaps", [])
+
+            comb_strengths = (t_strengths + s_strengths) or ["Demonstrated competency across required technologies"]
+            comb_gaps = t_gaps + s_gaps
+
+            if combined_score >= 80.0:
+                status = "Strong Hire"
+            elif combined_score >= 60.0:
+                status = "Borderline Hire"
+            else:
+                status = "Rejected / No-Hire"
+
+            arch_notes = tech_res.get("architecture_notes", "")
+            traj_notes = dom_res.get("trajectory_notes", "")
+            notes = [n for n in [arch_notes, traj_notes] if n]
+            screening_reasoning = " | ".join(notes) or f"Dual-rubric evaluation score: {combined_score:.1f}/100"
+
+            suggestions = (
+                f"Deepen hands-on expertise in {', '.join(comb_gaps[:2])}."
+                if comb_gaps
+                else "Prepare candidate for system architecture and cross-team leadership evaluation."
+            )
+
+            return {
+                "technical_score": tech_score,
+                "domain_fit_score": dom_score,
+                "technical_strengths": t_strengths,
+                "technical_gaps": t_gaps,
+                "sourcing_strengths": s_strengths,
+                "sourcing_gaps": s_gaps,
+                "architecture_notes": arch_notes,
+                "trajectory_notes": traj_notes,
+                "strengths": comb_strengths,
+                "gaps": comb_gaps,
+                "screening_status": status,
+                "screening_reasoning": screening_reasoning,
+                "improvement_suggestions": suggestions,
+            }
+
+        def _call_deep_screen() -> Dict[str, Any]:
+            try:
+                return _call_dual_rubrics()
+            except Exception as e_dual:
+                logger.debug(f"Dual-rubric evaluation fell back to legacy DeepScreenOutput: {e_dual}")
+                legacy_messages = [
+                    SystemMessage(content=DEEP_SCREEN_SYSTEM_PROMPT),
+                    HumanMessage(content=prompt_content),
+                ]
+                res = invoke_structured(llm, legacy_messages, DeepScreenOutput)
+                status = res.get("screening_status", "Screened")
+                score_approx = (
+                    85.0 if "strong" in status.lower() else (65.0 if "borderline" in status.lower() else 45.0)
+                )
+                return {
+                    "technical_score": score_approx,
+                    "domain_fit_score": score_approx,
+                    "technical_strengths": res.get("strengths", []),
+                    "technical_gaps": res.get("gaps", []),
+                    "sourcing_strengths": res.get("strengths", []),
+                    "sourcing_gaps": res.get("gaps", []),
+                    "architecture_notes": res.get("screening_reasoning", ""),
+                    "trajectory_notes": "",
+                    "strengths": res.get("strengths", []),
+                    "gaps": res.get("gaps", []),
+                    "screening_status": status,
+                    "screening_reasoning": res.get("screening_reasoning", ""),
+                    "improvement_suggestions": res.get("improvement_suggestions", ""),
+                }
 
         with rate_limiter:
             try:
                 _rate_limited_call()
                 result = execute_with_retry(_call_deep_screen)
+                c["technical_score"] = result.get("technical_score", 70.0)
+                c["domain_fit_score"] = result.get("domain_fit_score", 70.0)
+                c["technical_strengths"] = result.get("technical_strengths", [])
+                c["technical_gaps"] = result.get("technical_gaps", [])
+                c["sourcing_strengths"] = result.get("sourcing_strengths", [])
+                c["sourcing_gaps"] = result.get("sourcing_gaps", [])
+                c["architecture_notes"] = result.get("architecture_notes", "")
+                c["trajectory_notes"] = result.get("trajectory_notes", "")
                 c["strengths"] = result.get("strengths", [])
                 c["gaps"] = result.get("gaps", [])
                 c["improvement_suggestions"] = result.get("improvement_suggestions", "")
@@ -390,6 +538,8 @@ Candidate Resume Text:
             except Exception as e:
                 err_msg = f"Failed to screen {candidate_name}: {e}"
                 logger.error(err_msg)
+                c["technical_score"] = 70.0
+                c["domain_fit_score"] = 70.0
                 c["strengths"] = ["Semantic match based on vector DB indexing"]
                 c["gaps"] = ["Skipped deep screening audit due to LLM error"]
                 c["improvement_suggestions"] = "Schedule interview to evaluate candidates skills directly."

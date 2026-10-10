@@ -125,8 +125,76 @@ def test_generate_dynamic_intent_anchors(mock_invoke_structured):
     }
     from agentic_profile_matching.agent.routers import generate_dynamic_intent_anchors
 
-    mock_llm = MagicMock()
-    anchors = generate_dynamic_intent_anchors(mock_llm)
-    assert "extract_requirements" in anchors
-    assert len(anchors["extract_requirements"]) == 2
-    assert "conversational_query" in anchors
+    try:
+        mock_llm = MagicMock()
+        anchors = generate_dynamic_intent_anchors(mock_llm)
+        assert "extract_requirements" in anchors
+        assert len(anchors["extract_requirements"]) == 2
+        assert "conversational_query" in anchors
+    finally:
+        import agentic_profile_matching.agent.routers as r_mod
+
+        r_mod._DYNAMIC_INTENT_ANCHORS = None
+        r_mod._ANCHOR_EMBEDDINGS = None
+
+
+def test_calculate_intent_margin_high_confidence():
+    from agentic_profile_matching.agent.routers import calculate_intent_margin
+
+    query = "Search resumes for candidates with Java and Python experience."
+    res = calculate_intent_margin(query)
+    assert res.top1_intent == "extract_requirements"
+    assert res.top1_score >= 0.55
+    assert res.margin >= 0.12
+    assert res.is_confident is True
+    assert res.all_scores
+
+
+@patch("agentic_profile_matching.agent.routers._get_embedder")
+def test_calculate_intent_margin_ambiguous_escalation(mock_get_embedder):
+    import numpy as np
+    from agentic_profile_matching.agent.routers import calculate_intent_margin
+
+    mock_embedder = MagicMock()
+    mock_embedder.encode.return_value = [np.array([1.0, 0.0])]
+
+    mock_anchors = {
+        "extract_requirements": np.array([[0.50, 0.0]]),
+        "adjust_requirements": np.array([[0.48, 0.0]]),  # Delta = 0.02 < 0.12 -> Ambiguous!
+        "conversational_query": np.array([[0.10, 0.0]]),
+    }
+    mock_get_embedder.return_value = (mock_embedder, mock_anchors)
+
+    res = calculate_intent_margin("Ambiguous query text")
+    assert res.top1_score == 0.50
+    assert abs(res.margin - 0.02) < 1e-4
+    assert res.is_confident is False
+    assert res.needs_escalation is True
+
+
+@patch("agentic_profile_matching.agent.routers._classify_via_llm")
+@patch("agentic_profile_matching.agent.routers.calculate_intent_margin")
+def test_route_input_escalates_on_ambiguity(mock_calc_margin, mock_classify_llm):
+    from agentic_profile_matching.agent.routers import RouteMarginResult
+
+    mock_calc_margin.return_value = RouteMarginResult(
+        top1_intent="adjust_requirements",
+        top1_score=0.48,
+        top2_intent="extract_requirements",
+        top2_score=0.45,
+        margin=0.03,
+        is_confident=False,
+        needs_escalation=True,
+        all_scores={},
+    )
+    mock_classify_llm.return_value = "conversational_query"
+
+    state: AgentState = {
+        "messages": [HumanMessage(content="Uncertain query prompt")],
+        "requirements": {"title": "Engineer"},
+        "shortlist": [],
+    }
+
+    routed = route_input(state)
+    assert routed == "conversational_query"
+    mock_classify_llm.assert_called_once_with(state)

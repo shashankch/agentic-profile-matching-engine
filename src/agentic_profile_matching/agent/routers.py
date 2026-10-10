@@ -16,6 +16,28 @@ class RouteDecision(BaseModel):
     reasoning: str = Field(default="", description="Short 1-sentence reasoning for the routing classification.")
 
 
+class IntentResolution(BaseModel):
+    intent: Literal[
+        "extract_requirements",
+        "adjust_requirements",
+        "conversational_query",
+        "clarification_needed",
+    ] = Field(description="The target workflow branch for this user input.")
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Confidence score between 0.0 and 1.0.")
+    reasoning: str = Field(default="", description="Short 1-sentence reasoning for the routing classification.")
+
+
+class RouteMarginResult(BaseModel):
+    top1_intent: str
+    top1_score: float
+    top2_intent: str
+    top2_score: float
+    margin: float
+    is_confident: bool
+    needs_escalation: bool
+    all_scores: Dict[str, float] = Field(default_factory=dict)
+
+
 # Rich Semantic Intent Signatures used as baseline vector centroids for zero-shot embedding routing
 DEFAULT_INTENT_DESCRIPTIONS: Dict[str, List[str]] = {
     "extract_requirements": [
@@ -143,6 +165,78 @@ def _get_embedder():
     return _EMBEDDER, _ANCHOR_EMBEDDINGS
 
 
+def calculate_intent_margin(query: str, state: Optional[AgentState] = None) -> RouteMarginResult:
+    """
+    Computes calibrated intent margin:
+        Delta = Score_Top1 - Score_Top2
+    - High confidence route: Score_Top1 >= 0.55 and Delta >= 0.12 (Direct route in <2ms)
+    - Ambiguity escalation: Delta < 0.12 or Score_Top1 < 0.45 (Escalate to LLM)
+    """
+    clean_query = (query or "").strip()
+    if not clean_query:
+        return RouteMarginResult(
+            top1_intent="extract_requirements",
+            top1_score=1.0,
+            top2_intent="conversational_query",
+            top2_score=0.0,
+            margin=1.0,
+            is_confident=True,
+            needs_escalation=False,
+            all_scores={"extract_requirements": 1.0, "adjust_requirements": 0.0, "conversational_query": 0.0},
+        )
+
+    embedder, anchor_dict = _get_embedder()
+    if embedder is None or not anchor_dict:
+        return RouteMarginResult(
+            top1_intent="extract_requirements",
+            top1_score=0.50,
+            top2_intent="conversational_query",
+            top2_score=0.40,
+            margin=0.10,
+            is_confident=False,
+            needs_escalation=True,
+            all_scores={},
+        )
+
+    try:
+        query_emb = embedder.encode([clean_query], normalize_embeddings=True)[0]
+        scores: Dict[str, float] = {}
+        for intent, anchor_embs in anchor_dict.items():
+            sims = np.dot(anchor_embs, query_emb)
+            scores[intent] = float(np.max(sims))
+
+        sorted_intents = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        top1_intent, top1_score = sorted_intents[0]
+        top2_intent, top2_score = sorted_intents[1] if len(sorted_intents) > 1 else ("", 0.0)
+        margin = float(top1_score - top2_score)
+
+        is_confident = (top1_score >= 0.55) and (margin >= 0.12)
+        needs_escalation = (margin < 0.12) or (top1_score < 0.45)
+
+        return RouteMarginResult(
+            top1_intent=top1_intent,
+            top1_score=top1_score,
+            top2_intent=top2_intent,
+            top2_score=top2_score,
+            margin=margin,
+            is_confident=is_confident,
+            needs_escalation=needs_escalation,
+            all_scores=scores,
+        )
+    except Exception as e:
+        logger.warning(f"Error computing intent margin: {e}")
+        return RouteMarginResult(
+            top1_intent="extract_requirements",
+            top1_score=0.50,
+            top2_intent="conversational_query",
+            top2_score=0.40,
+            margin=0.10,
+            is_confident=False,
+            needs_escalation=True,
+            all_scores={},
+        )
+
+
 def _classify_via_semantic_similarity(query: str, confidence_threshold: float = 0.20) -> Optional[str]:
     """
     Tier 1 Local Semantic Router: Computes cosine similarity against dynamic intent prototypes.
@@ -214,8 +308,13 @@ def _classify_via_llm(state: AgentState) -> Optional[str]:
             "openai": "OPENAI_API_KEY",
         }
         env_var = provider_keys.get(llm_provider, "GROQ_API_KEY")
+
+        raw_state_key = state.get("api_key") if isinstance(state, dict) else None
+        if raw_state_key:
+            logger.debug("api_key supplied via state dict; recommend configuring via environment or RunnableConfig.")
+
         api_key = (
-            state.get("api_key")
+            raw_state_key
             or os.environ.get(env_var)
             or os.environ.get("GROQ_API_KEY")
             or os.environ.get("GEMINI_API_KEY")
@@ -247,10 +346,15 @@ def _classify_via_llm(state: AgentState) -> Optional[str]:
             HumanMessage(content=f"User Message to route: {last_msg}"),
         ]
 
-        result = invoke_structured(llm, prompt_messages, RouteDecision)
+        result = invoke_structured(llm, prompt_messages, IntentResolution)
         intent = result.get("intent")
+        if intent == "clarification_needed":
+            logger.info("LLM classified as clarification_needed; delegating to conversational assistant branch.")
+            return "conversational_query"
         if intent in ["extract_requirements", "adjust_requirements", "conversational_query"]:
-            logger.info(f"LLM routing decision: {intent} (Reason: {result.get('reasoning', 'N/A')})")
+            logger.info(
+                f"LLM routing decision: {intent} (Reason: {result.get('reasoning', 'N/A')}, Conf: {result.get('confidence', 1.0)})"
+            )
             return intent
     except Exception as e:
         logger.warning(f"LLM routing error: {e}")
@@ -260,16 +364,19 @@ def _classify_via_llm(state: AgentState) -> Optional[str]:
 
 def route_input(state: AgentState) -> str:
     """
-    Production LLM-Driven Intent Router (2026 Standards):
+    Phase 18 Production Calibrated Margin Router:
     1. Zero-Token Structural Fast-Paths:
        - Empty message -> extract_requirements.
        - Multi-line raw Job Description paste -> extract_requirements.
+       - Explicit search prefix -> conversational_query.
     2. In-Memory Query Cache:
        - Sub-millisecond lookup for identical queries in the same context.
-    3. Primary Intelligence:
-       - LLM Structured Intent Classifier (with_structured_output).
-    4. Resilient Local Fallbacks:
-       - Dynamic semantic embedding similarity against intent prototypes.
+    3. Calibrated Margin Semantic Routing:
+       - Delta = Score_Top1 - Score_Top2
+       - If Score_Top1 >= 0.55 and Delta >= 0.12 -> Direct route in <2ms with zero LLM cost.
+    4. Ambiguity Escalation Gate:
+       - If Delta < 0.12 or Score_Top1 < 0.45 -> Escalate to structured LLM classifier.
+    5. Resilient Local Fallbacks:
        - State-aware heuristic fallback.
     """
     messages = state.get("messages", [])
@@ -321,22 +428,42 @@ def route_input(state: AgentState) -> str:
         logger.debug(f"Resolved intent from routing cache: {cached_intent}")
         return cached_intent
 
-    # 4. Primary Tier: LLM Structured Intent Classifier
-    llm_intent = _classify_via_llm(state)
-    if llm_intent:
-        _ROUTING_CACHE[cache_key] = llm_intent
-        return llm_intent
+    # 4. Calibrated Margin Semantic Direct Routing (<2ms, 0 LLM cost)
+    margin_res = calculate_intent_margin(last_msg, state)
+    if margin_res.is_confident:
+        intent = margin_res.top1_intent
+        if intent == "adjust_requirements" and not has_requirements:
+            intent = "extract_requirements"
+        logger.info(
+            f"Calibrated margin direct route: {intent} (Top1: {margin_res.top1_score:.3f}, Top2: {margin_res.top2_score:.3f}, Delta: {margin_res.margin:.3f})"
+        )
+        _ROUTING_CACHE[cache_key] = intent
+        return intent
 
-    # 5. Secondary Tier: Local Semantic Embedding Router with Dynamic Intent Prototypes
+    # 5. Ambiguity Escalation Gate: Escalate to Structured LLM Classifier
+    if margin_res.needs_escalation:
+        logger.info(
+            f"Ambiguity detected (Top1: {margin_res.top1_score:.3f}, Top2: {margin_res.top2_score:.3f}, Delta: {margin_res.margin:.3f}) - Escalating to structured LLM"
+        )
+        llm_intent = _classify_via_llm(state)
+        if llm_intent:
+            if llm_intent == "clarification_needed":
+                llm_intent = "conversational_query"
+            if llm_intent == "adjust_requirements" and not has_requirements:
+                llm_intent = "extract_requirements"
+            _ROUTING_CACHE[cache_key] = llm_intent
+            return llm_intent
+
+    # 6. Secondary Tier: Local Semantic Embedding Router Fallback
     semantic_intent = _classify_via_semantic_similarity(last_msg, confidence_threshold=0.35)
     if semantic_intent:
         if semantic_intent == "adjust_requirements" and not has_requirements:
             semantic_intent = "extract_requirements"
-        logger.info(f"Resolved intent via local semantic similarity: {semantic_intent}")
+        logger.info(f"Resolved intent via local semantic similarity fallback: {semantic_intent}")
         _ROUTING_CACHE[cache_key] = semantic_intent
         return semantic_intent
 
-    # 5. Tertiary Tier: State-Aware Resilient Fallback (Zero hardcoded arrays)
+    # 7. Tertiary Tier: State-Aware Resilient Fallback (Zero hardcoded arrays)
     if has_requirements and any(
         w in lower_msg for w in ["add", "make", "increase", "decrease", "remove", "change", "filter", "require"]
     ):

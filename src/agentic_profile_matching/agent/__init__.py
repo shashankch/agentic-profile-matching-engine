@@ -20,7 +20,11 @@ from agentic_profile_matching.agent.nodes import (
 builder = StateGraph(AgentState)
 
 # Add Nodes
-builder.add_node("parse_input", parse_input_node)
+builder.add_node(
+    "parse_input",
+    parse_input_node,
+    destinations=("extract_requirements", "adjust_requirements", "conversational_query"),
+)
 builder.add_node("extract_requirements", extract_requirements_node)
 builder.add_node("adjust_requirements", adjust_requirements_node)
 builder.add_node("conversational_query", conversational_query_node)
@@ -32,17 +36,6 @@ builder.add_node("generate_report", generate_report_node)
 
 # Add Edges
 builder.add_edge(START, "parse_input")
-
-# Conditional Router from parse_input
-builder.add_conditional_edges(
-    "parse_input",
-    route_input,
-    {
-        "extract_requirements": "extract_requirements",
-        "adjust_requirements": "adjust_requirements",
-        "conversational_query": "conversational_query",
-    },
-)
 
 builder.add_edge("extract_requirements", "search_resumes")
 builder.add_edge("adjust_requirements", "search_resumes")
@@ -85,4 +78,4 @@ def generate_diagrams():
         print("Mermaid representation is still saved, which can be rendered in markdown.")
 
 
-__all__ = ["matching_agent_workflow", "AgentState", "builder"]
+__all__ = ["matching_agent_workflow", "AgentState", "builder", "route_input"]
